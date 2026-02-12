@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Enums
+// ============================================
+
+enum UserRole {
+  MANAGER
+  OPERATOR
+}
+
+enum PropertyType {
+  APPARTAMENTO
+  VILLA
+  ALTRO
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  APPROVED
+  REJECTED
+}
+
+enum SupplyCategory {
+  CAFFE
+  TE
+  ZUCCHERO
+  CARTA_IGIENICA
+  TOVAGLIOLI
+  SAPONE_MANI
+  SHAMPOO
+  BAGNOSCHIUMA
+  ALTRO
+}
+
+enum SupplyLevelEnum {
+  OK
+  IN_ESAURIMENTO
+  ESAURITO
+}
+
+enum LinenType {
+  LENZUOLA
+  ASCIUGAMANI
+  TOVAGLIE
+}
+
+enum LinenStatus {
+  SPORCA
+  IN_LAVAGGIO
+  PRONTA
+}
+
+enum ReportCategory {
+  DANNO
+  MANUTENZIONE
+  OGGETTO_MANCANTE
+}
+
+enum ReportPriority {
+  BASSA
+  MEDIA
+  ALTA
+}
+
+enum ReportStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+// ============================================
+// Models
+// ============================================
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  email         String   @unique
+  password_hash String
+  first_name    String
+  last_name     String
+  role          UserRole
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  assigned_tasks  CleaningTask[]      @relation("AssignedTasks")
+  reviewed_tasks  CleaningTask[]      @relation("ReviewedTasks")
+  reports_created MaintenanceReport[]
+
+  @@map("users")
+}
+
+model Property {
+  id            String       @id @default(uuid()) @db.Uuid
+  name          String
+  code          String       @unique
+  address       String
+  property_type PropertyType
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+
+  checklist_template ChecklistTemplate?
+  cleaning_tasks     CleaningTask[]
+  supply_levels      SupplyLevel[]
+  linen_inventory    LinenInventory[]
+  reports            MaintenanceReport[]
+
+  @@map("properties")
+}
+
+model ChecklistTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  property_id String   @unique @db.Uuid
+  items       Json     // Array of { area: string, description: string, photo_required: boolean }
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@map("checklist_templates")
+}
+
+model CleaningTask {
+  id              String     @id @default(uuid()) @db.Uuid
+  property_id     String     @db.Uuid
+  assigned_to     String     @db.Uuid
+  scheduled_date  DateTime   @db.Date
+  status          TaskStatus @default(TODO)
+  checklist_data  Json?      // Copy from template + operator input
+  notes           String?
+  completed_at    DateTime?
+  reviewed_at     DateTime?
+  reviewed_by     String?    @db.Uuid
+  rejection_notes String?
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
+
+  property Property   @relation(fields: [property_id], references: [id])
+  operator User       @relation("AssignedTasks", fields: [assigned_to], references: [id])
+  reviewer User?      @relation("ReviewedTasks", fields: [reviewed_by], references: [id])
+  photos   TaskPhoto[]
+  reports  MaintenanceReport[]
+
+  @@map("cleaning_tasks")
+}
+
+model TaskPhoto {
+  id                   String   @id @default(uuid()) @db.Uuid
+  task_id              String   @db.Uuid
+  checklist_item_index Int
+  photo_url            String
+  uploaded_at          DateTime @default(now())
+
+  task CleaningTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@map("task_photos")
+}
+
+model SupplyLevel {
+  id          String          @id @default(uuid()) @db.Uuid
+  property_id String          @db.Uuid
+  task_id     String?         @db.Uuid
+  category    SupplyCategory
+  level       SupplyLevelEnum
+  updated_at  DateTime        @default(now()) @updatedAt
+
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@unique([property_id, category])
+  @@map("supply_levels")
+}
+
+model LinenInventory {
+  id          String      @id @default(uuid()) @db.Uuid
+  property_id String      @db.Uuid
+  type        LinenType
+  status      LinenStatus
+  quantity    Int
+  updated_at  DateTime    @default(now()) @updatedAt
+
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@unique([property_id, type, status])
+  @@map("linen_inventory")
+}
+
+model MaintenanceReport {
+  id          String         @id @default(uuid()) @db.Uuid
+  property_id String         @db.Uuid
+  task_id     String?        @db.Uuid
+  created_by  String         @db.Uuid
+  title       String
+  description String
+  category    ReportCategory
+  priority    ReportPriority
+  status      ReportStatus   @default(OPEN)
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+  resolved_at DateTime?
+
+  property Property      @relation(fields: [property_id], references: [id])
+  task     CleaningTask?  @relation(fields: [task_id], references: [id])
+  author   User           @relation(fields: [created_by], references: [id])
+  photos   ReportPhoto[]
+
+  @@map("maintenance_reports")
+}
+
+model ReportPhoto {
+  id          String   @id @default(uuid()) @db.Uuid
+  report_id   String   @db.Uuid
+  photo_url   String
+  uploaded_at DateTime @default(now())
+
+  report MaintenanceReport @relation(fields: [report_id], references: [id], onDelete: Cascade)
+
+  @@map("report_photos")
+}
