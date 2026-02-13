@@ -98,7 +98,7 @@ export async function POST(req: Request) {
       assigned_to: parsed.data.assigned_to,
       scheduled_date: new Date(parsed.data.scheduled_date),
       notes: parsed.data.notes,
-      checklist_data: checklistData,
+      checklist_data: checklistData ?? undefined,
     },
     include: {
       property: { select: { id: true, name: true, code: true } },
