@@ -9,13 +9,13 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url("DATABASE_URL deve essere un URL valido"),
 
   // NextAuth
-  NEXTAUTH_URL: z.string().url("NEXTAUTH_URL deve essere un URL valido"),
+  NEXTAUTH_URL: z.string().url("NEXTAUTH_URL deve essere un URL valido").optional(),
   NEXTAUTH_SECRET: z
     .string()
     .min(32, "NEXTAUTH_SECRET deve essere almeno 32 caratteri per sicurezza"),
 
-  // Uploadthing
-  UPLOADTHING_TOKEN: z.string().min(1, "UPLOADTHING_TOKEN è richiesto"),
+  // Uploadthing (opzionale)
+  UPLOADTHING_TOKEN: z.string().optional(),
 
   // Node environment
   NODE_ENV: z
