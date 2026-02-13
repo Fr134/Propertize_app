@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, MapPin, Play, Send } from "lucide-react";
+import { ArrowLeft, MapPin, Play, Send, RotateCcw } from "lucide-react";
 
 export default function OperatorTaskDetailPage({
   params,
@@ -79,6 +79,20 @@ export default function OperatorTaskDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-sm">{task.rejection_notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {task.reopen_note && (
+        <Card className="border-orange-300 bg-orange-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-orange-800">
+              <RotateCcw className="h-4 w-4" />
+              Nota dal manager — da correggere
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-orange-900">{task.reopen_note}</p>
           </CardContent>
         </Card>
       )}

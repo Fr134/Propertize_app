@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson, type PaginatedResponse } from "@/lib/fetch";
-import type { CreateTaskInput, ReviewTaskInput } from "@/lib/validators";
+import type { CreateTaskInput, ReviewTaskInput, ReopenTaskInput } from "@/lib/validators";
 
 // --- Types ---
 
@@ -53,6 +53,8 @@ interface TaskDetail extends TaskListItem {
   reviewed_at: string | null;
   reviewed_by: string | null;
   rejection_notes: string | null;
+  reopen_note: string | null;
+  reopen_at: string | null;
   reviewer: { id: string; first_name: string; last_name: string } | null;
   photos: TaskPhoto[];
 }
@@ -168,6 +170,22 @@ export function useReviewTask(taskId: string) {
   return useMutation({
     mutationFn: (data: ReviewTaskInput) =>
       fetchJson(`/api/tasks/${taskId}/review`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", taskId] });
+    },
+  });
+}
+
+export function useReopenTask(taskId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: ReopenTaskInput) =>
+      fetchJson(`/api/tasks/${taskId}/reopen`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

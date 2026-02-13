@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { json, errorResponse, requireManager } from "@/lib/api-utils";
-import { reviewTaskSchema } from "@/lib/validators";
+import { reopenTaskSchema } from "@/lib/validators";
 import { type NextRequest } from "next/server";
 
 /**
- * PATCH /api/tasks/[id]/review
- * Approva o rigetta una task completata (solo MANAGER)
- * Atomic: only transitions COMPLETED -> APPROVED|REJECTED
+ * PATCH /api/tasks/[id]/reopen
+ * Manager reopens a rejected task (REJECTED -> IN_PROGRESS)
+ * Requires a note explaining what to fix.
+ * Checklist progress is preserved.
  */
 export async function PATCH(
   req: NextRequest,
@@ -17,28 +18,37 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const parsed = reviewTaskSchema.safeParse(body);
+  const parsed = reopenTaskSchema.safeParse(body);
 
   if (!parsed.success) {
     return errorResponse(parsed.error.issues[0].message, 400);
   }
 
-  // Atomic conditional update: only if status is COMPLETED
+  // Atomic conditional update: only if status is REJECTED
   const { count } = await prisma.cleaningTask.updateMany({
-    where: { id, status: "COMPLETED" },
+    where: { id, status: "REJECTED" },
     data: {
-      status: parsed.data.status,
-      reviewed_at: new Date(),
-      reviewed_by: session!.user.id,
-      rejection_notes: parsed.data.status === "REJECTED" ? parsed.data.notes : null,
+      status: "IN_PROGRESS",
+      reopen_note: parsed.data.note,
+      reopen_at: new Date(),
+      reopen_by: session!.user.id,
+      reviewed_at: null,
+      reviewed_by: null,
+      completed_at: null,
+      // checklist_data is NOT reset — operator keeps their progress
     },
   });
 
   if (count === 0) {
     const task = await prisma.cleaningTask.findUnique({ where: { id } });
     if (!task) return errorResponse("Task non trovata", 404);
-    // Already reviewed — idempotent response
-    return json({ ...task, alreadyApplied: true });
+    if (task.status === "IN_PROGRESS") {
+      return json({ ...task, alreadyApplied: true });
+    }
+    return errorResponse(
+      `Impossibile riaprire: lo stato attuale e' ${task.status} (richiesto REJECTED)`,
+      400
+    );
   }
 
   const updatedTask = await prisma.cleaningTask.findUnique({

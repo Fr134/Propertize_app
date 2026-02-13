@@ -95,6 +95,7 @@ model User {
 
   assigned_tasks  CleaningTask[]      @relation("AssignedTasks")
   reviewed_tasks  CleaningTask[]      @relation("ReviewedTasks")
+  reopened_tasks  CleaningTask[]      @relation("ReopenedTasks")
   reports_created MaintenanceReport[]
 
   @@map("users")
@@ -142,12 +143,16 @@ model CleaningTask {
   reviewed_at     DateTime?
   reviewed_by     String?    @db.Uuid
   rejection_notes String?
+  reopen_note     String?
+  reopen_at       DateTime?
+  reopen_by       String?    @db.Uuid
   created_at      DateTime   @default(now())
   updated_at      DateTime   @updatedAt
 
   property Property   @relation(fields: [property_id], references: [id])
   operator User       @relation("AssignedTasks", fields: [assigned_to], references: [id])
   reviewer User?      @relation("ReviewedTasks", fields: [reviewed_by], references: [id])
+  reopener User?      @relation("ReopenedTasks", fields: [reopen_by], references: [id])
   photos   TaskPhoto[]
   reports  MaintenanceReport[]
 

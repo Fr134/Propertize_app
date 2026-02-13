@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { json, errorResponse, requireAuth } from "@/lib/api-utils";
 
 // PATCH /api/tasks/[id]/complete - Operator completes a task
+// Atomic: only transitions IN_PROGRESS -> COMPLETED
 export async function PATCH(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -11,14 +12,20 @@ export async function PATCH(
 
   const { id } = await params;
 
+  // First fetch to validate checklist (needed before we transition)
   const task = await prisma.cleaningTask.findUnique({
     where: { id },
     include: { photos: true },
   });
 
   if (!task) return errorResponse("Task non trovato", 404);
-  if (task.assigned_to !== session!.user.id) return errorResponse("Accesso negato", 403);
-  if (task.status !== "IN_PROGRESS") return errorResponse("Il task non e' in corso");
+  if (task.assigned_to !== session!.user.id)
+    return errorResponse("Accesso negato", 403);
+
+  // Idempotent: already completed or beyond
+  if (task.status !== "IN_PROGRESS") {
+    return json({ ...task, alreadyApplied: true });
+  }
 
   // Validate: all items completed, required photos uploaded
   const checklistData = task.checklist_data as {
@@ -39,13 +46,21 @@ export async function PATCH(
     }
   }
 
-  const updated = await prisma.cleaningTask.update({
-    where: { id },
+  // Atomic conditional update
+  const { count } = await prisma.cleaningTask.updateMany({
+    where: { id, status: "IN_PROGRESS", assigned_to: session!.user.id },
     data: {
       status: "COMPLETED",
       completed_at: new Date(),
     },
   });
 
+  if (count === 0) {
+    // Race: someone else transitioned between our read and write
+    const current = await prisma.cleaningTask.findUnique({ where: { id } });
+    return json({ ...current, alreadyApplied: true });
+  }
+
+  const updated = await prisma.cleaningTask.findUnique({ where: { id } });
   return json(updated);
 }

@@ -7,8 +7,9 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, MapPin, User, Calendar, Camera, CheckCircle2, Circle, ThumbsUp, ThumbsDown } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Camera, CheckCircle2, Circle, ThumbsUp, ThumbsDown, RotateCcw } from "lucide-react";
 import { TaskReviewModal } from "@/components/manager/task-review-modal";
+import { TaskReopenModal } from "@/components/manager/task-reopen-modal";
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("it-IT", {
@@ -27,6 +28,7 @@ export default function ManagerTaskDetailPage({
   const { data: task, isLoading } = useTask(id);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [reviewMode, setReviewMode] = useState<"approve" | "reject">("approve");
+  const [reopenModalOpen, setReopenModalOpen] = useState(false);
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Caricamento...</p>;
   if (!task) return <p className="text-sm text-destructive">Task non trovato.</p>;
@@ -69,6 +71,12 @@ export default function ManagerTaskDetailPage({
                 Approva
               </Button>
             </>
+          )}
+          {task.status === "REJECTED" && (
+            <Button variant="outline" size="sm" onClick={() => setReopenModalOpen(true)}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Riapri
+            </Button>
           )}
         </div>
       </div>
@@ -126,6 +134,17 @@ export default function ManagerTaskDetailPage({
         </Card>
       )}
 
+      {task.reopen_note && (
+        <Card className="border-orange-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-orange-700">Nota riapertura</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm">{task.reopen_note}</p>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Checklist</CardTitle>
@@ -177,6 +196,12 @@ export default function ManagerTaskDetailPage({
         isOpen={reviewModalOpen}
         onClose={() => setReviewModalOpen(false)}
         mode={reviewMode}
+      />
+
+      <TaskReopenModal
+        taskId={id}
+        isOpen={reopenModalOpen}
+        onClose={() => setReopenModalOpen(false)}
       />
     </div>
   );

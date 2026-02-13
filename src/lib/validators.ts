@@ -52,6 +52,12 @@ export const reviewTaskSchema = z.object({
 
 export type ReviewTaskInput = z.infer<typeof reviewTaskSchema>;
 
+export const reopenTaskSchema = z.object({
+  note: z.string().min(5, "La nota deve avere almeno 5 caratteri"),
+});
+
+export type ReopenTaskInput = z.infer<typeof reopenTaskSchema>;
+
 // --- Supply ---
 
 export const updateSupplySchema = z.object({
