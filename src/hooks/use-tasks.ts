@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchJson } from "@/lib/fetch";
+import { fetchJson, type PaginatedResponse } from "@/lib/fetch";
 import type { CreateTaskInput, ReviewTaskInput } from "@/lib/validators";
 
 // --- Types ---
@@ -79,7 +79,10 @@ function buildQueryString(filters: TaskFilters): string {
 export function useTasks(filters: TaskFilters = {}) {
   return useQuery({
     queryKey: ["tasks", filters],
-    queryFn: () => fetchJson<TaskListItem[]>(`/api/tasks${buildQueryString(filters)}`),
+    queryFn: async () => {
+      const res = await fetchJson<PaginatedResponse<TaskListItem>>(`/api/tasks${buildQueryString(filters)}`);
+      return res.data;
+    },
   });
 }
 

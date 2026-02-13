@@ -1,11 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { CreatePropertyInput, UpdateChecklistTemplateInput } from "@/lib/validators";
-import { fetchJson } from "@/lib/fetch";
+import { fetchJson, type PaginatedResponse } from "@/lib/fetch";
 
 export function useProperties() {
   return useQuery({
     queryKey: ["properties"],
-    queryFn: () => fetchJson<PropertyListItem[]>("/api/properties"),
+    queryFn: async () => {
+      const res = await fetchJson<PaginatedResponse<PropertyListItem>>("/api/properties");
+      return res.data;
+    },
   });
 }
 

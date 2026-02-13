@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchJson } from "@/lib/fetch";
+import { fetchJson, type PaginatedResponse } from "@/lib/fetch";
 import type { CreateReportInput, UpdateReportStatusInput } from "@/lib/validators";
 
 interface ReportListItem {
@@ -47,7 +47,10 @@ function buildQs(filters: ReportFilters) {
 export function useReports(filters: ReportFilters = {}) {
   return useQuery({
     queryKey: ["reports", filters],
-    queryFn: () => fetchJson<ReportListItem[]>(`/api/reports${buildQs(filters)}`),
+    queryFn: async () => {
+      const res = await fetchJson<PaginatedResponse<ReportListItem>>(`/api/reports${buildQs(filters)}`);
+      return res.data;
+    },
   });
 }
 
