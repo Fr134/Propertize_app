@@ -2,11 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { json, errorResponse, requireAuth } from "@/lib/api-utils";
 
 // POST /api/reports/[id]/photos - Add photo to report
+// MANAGER: can add to any report
+// OPERATOR: can only add to own reports
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requireAuth();
+  const { session, error } = await requireAuth();
   if (error) return error;
 
   const { id } = await params;
@@ -17,6 +19,11 @@ export async function POST(
 
   const report = await prisma.maintenanceReport.findUnique({ where: { id } });
   if (!report) return errorResponse("Segnalazione non trovata", 404);
+
+  // Operators can only attach photos to their own reports
+  if (session!.user.role === "OPERATOR" && report.created_by !== session!.user.id) {
+    return errorResponse("Segnalazione non trovata", 404);
+  }
 
   // Check max 5 photos
   const count = await prisma.reportPhoto.count({ where: { report_id: id } });

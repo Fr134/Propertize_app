@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { json, requireAuth } from "@/lib/api-utils";
+import { json, requireManager } from "@/lib/api-utils";
 import { type NextRequest } from "next/server";
 
-// GET /api/users?role=OPERATOR - List users by role
+// GET /api/users?role=OPERATOR - List users by role (manager only)
 export async function GET(req: NextRequest) {
-  const { error } = await requireAuth();
+  const { error } = await requireManager();
   if (error) return error;
 
   const role = req.nextUrl.searchParams.get("role");

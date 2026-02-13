@@ -2,11 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { json, errorResponse, requireAuth } from "@/lib/api-utils";
 
 // GET /api/reports/[id] - Report detail
+// MANAGER: can view any report
+// OPERATOR: can only view own reports
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requireAuth();
+  const { session, error } = await requireAuth();
   if (error) return error;
 
   const { id } = await params;
@@ -22,6 +24,11 @@ export async function GET(
   });
 
   if (!report) {
+    return errorResponse("Segnalazione non trovata", 404);
+  }
+
+  // Operators can only view their own reports
+  if (session!.user.role === "OPERATOR" && report.created_by !== session!.user.id) {
     return errorResponse("Segnalazione non trovata", 404);
   }
 

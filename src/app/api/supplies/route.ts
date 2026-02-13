@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { json, errorResponse, requireAuth } from "@/lib/api-utils";
+import { json, errorResponse, requireManager } from "@/lib/api-utils";
 import { updateSupplySchema } from "@/lib/validators";
 
-// PATCH /api/supplies - Update supply levels (during task)
+// PATCH /api/supplies - Update supply levels (manager only)
 export async function PATCH(req: Request) {
-  const { error } = await requireAuth();
+  const { error } = await requireManager();
   if (error) return error;
 
   const body = await req.json();

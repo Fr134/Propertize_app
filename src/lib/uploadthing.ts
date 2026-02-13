@@ -1,24 +1,34 @@
 import { createUploadthing, type FileRouter } from "uploadthing/next";
+import { UploadThingError } from "uploadthing/server";
+import { auth } from "@/lib/auth";
 
 const f = createUploadthing();
+
+async function requireSession() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new UploadThingError("Non autorizzato");
+  }
+  return { userId: session.user.id, role: session.user.role as string };
+}
 
 export const ourFileRouter = {
   taskPhoto: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
     .middleware(async () => {
-      // TODO: auth check will be added in Phase 2
-      return {};
+      const { userId, role } = await requireSession();
+      return { userId, role };
     })
-    .onUploadComplete(async ({ file }) => {
-      return { url: file.ufsUrl };
+    .onUploadComplete(async ({ metadata, file }) => {
+      return { url: file.ufsUrl, uploadedBy: metadata.userId };
     }),
 
   reportPhoto: f({ image: { maxFileSize: "4MB", maxFileCount: 5 } })
     .middleware(async () => {
-      // TODO: auth check will be added in Phase 2
-      return {};
+      const { userId, role } = await requireSession();
+      return { userId, role };
     })
-    .onUploadComplete(async ({ file }) => {
-      return { url: file.ufsUrl };
+    .onUploadComplete(async ({ metadata, file }) => {
+      return { url: file.ufsUrl, uploadedBy: metadata.userId };
     }),
 } satisfies FileRouter;
 

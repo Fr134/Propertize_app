@@ -16,11 +16,6 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // API routes for uploadthing
-  if (pathname.startsWith("/api/uploadthing")) {
-    return NextResponse.next();
-  }
-
   // Not logged in -> redirect to login
   if (!isLoggedIn) {
     return NextResponse.redirect(new URL("/login", req.url));
