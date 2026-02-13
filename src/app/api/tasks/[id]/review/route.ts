@@ -19,7 +19,7 @@ export async function PATCH(
   const parsed = reviewTaskSchema.safeParse(body);
 
   if (!parsed.success) {
-    return errorResponse(parsed.error.errors[0].message, 400);
+    return errorResponse(parsed.error.issues[0].message, 400);
   }
 
   const task = await prisma.cleaningTask.findUnique({

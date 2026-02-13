@@ -15,7 +15,7 @@ export async function PATCH(
   const parsed = updateReportStatusSchema.safeParse(body);
 
   if (!parsed.success) {
-    return errorResponse(parsed.error.errors[0].message);
+    return errorResponse(parsed.error.issues[0].message);
   }
 
   const report = await prisma.maintenanceReport.findUnique({ where: { id } });

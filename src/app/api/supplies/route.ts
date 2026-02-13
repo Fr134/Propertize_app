@@ -11,7 +11,7 @@ export async function PATCH(req: Request) {
   const parsed = updateSupplySchema.safeParse(body);
 
   if (!parsed.success) {
-    return errorResponse(parsed.error.errors[0].message);
+    return errorResponse(parsed.error.issues[0].message);
   }
 
   const results = [];

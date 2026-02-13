@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   const parsed = createPropertySchema.safeParse(body);
 
   if (!parsed.success) {
-    return errorResponse(parsed.error.errors[0].message);
+    return errorResponse(parsed.error.issues[0].message);
   }
 
   const existing = await prisma.property.findUnique({

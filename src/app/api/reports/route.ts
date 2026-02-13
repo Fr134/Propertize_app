@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   const parsed = createReportSchema.safeParse(body);
 
   if (!parsed.success) {
-    return errorResponse(parsed.error.errors[0].message);
+    return errorResponse(parsed.error.issues[0].message);
   }
 
   const report = await prisma.maintenanceReport.create({

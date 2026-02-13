@@ -24,7 +24,7 @@ export async function PUT(
   const parsed = updateChecklistTemplateSchema.safeParse(body);
 
   if (!parsed.success) {
-    return errorResponse(parsed.error.errors[0].message);
+    return errorResponse(parsed.error.issues[0].message);
   }
 
   const template = await prisma.checklistTemplate.upsert({

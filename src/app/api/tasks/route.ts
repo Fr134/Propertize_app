@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   const parsed = createTaskSchema.safeParse(body);
 
   if (!parsed.success) {
-    return errorResponse(parsed.error.errors[0].message);
+    return errorResponse(parsed.error.issues[0].message);
   }
 
   // Verify property exists and has a checklist template
