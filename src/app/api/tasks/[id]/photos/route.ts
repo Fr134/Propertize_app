@@ -44,7 +44,7 @@ export async function POST(
 
     await prisma.cleaningTask.update({
       where: { id },
-      data: { checklist_data: checklistData },
+      data: { checklist_data: checklistData as unknown as import("@prisma/client").Prisma.InputJsonValue },
     });
   }
 

@@ -27,7 +27,7 @@ export async function PATCH(
   if (task.assigned_to !== session!.user.id) return errorResponse("Accesso negato", 403);
   if (task.status !== "IN_PROGRESS") return errorResponse("Il task non e' in corso");
 
-  const checklistData = task.checklist_data as Record<string, unknown>[] | null;
+  const checklistData = task.checklist_data as Array<Record<string, unknown>> | null;
   if (!checklistData || itemIndex >= checklistData.length) {
     return errorResponse("Indice checklist non valido");
   }
@@ -41,7 +41,7 @@ export async function PATCH(
 
   const updated = await prisma.cleaningTask.update({
     where: { id },
-    data: { checklist_data: checklistData },
+    data: { checklist_data: checklistData as unknown as import("@prisma/client").Prisma.InputJsonValue },
   });
 
   return json(updated);
