@@ -97,6 +97,7 @@ model User {
   reviewed_tasks  CleaningTask[]      @relation("ReviewedTasks")
   reopened_tasks  CleaningTask[]      @relation("ReopenedTasks")
   reports_created MaintenanceReport[]
+  expenses_created Expense[]
 
   @@map("users")
 }
@@ -115,6 +116,7 @@ model Property {
   supply_levels      SupplyLevel[]
   linen_inventory    LinenInventory[]
   reports            MaintenanceReport[]
+  expenses           Expense[]
 
   @@map("properties")
 }
@@ -230,4 +232,33 @@ model ReportPhoto {
   report MaintenanceReport @relation(fields: [report_id], references: [id], onDelete: Cascade)
 
   @@map("report_photos")
+}
+
+model Expense {
+  id           String   @id @default(uuid()) @db.Uuid
+  property_id  String   @db.Uuid
+  created_by   String   @db.Uuid
+  description  String
+  amount       Decimal  @db.Decimal(10, 2)
+  vat_amount   Decimal? @db.Decimal(10, 2)
+  expense_date DateTime @db.Date @default(now())
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  property Property       @relation(fields: [property_id], references: [id])
+  author   User           @relation(fields: [created_by], references: [id])
+  photos   ExpensePhoto[]
+
+  @@map("expenses")
+}
+
+model ExpensePhoto {
+  id          String   @id @default(uuid()) @db.Uuid
+  expense_id  String   @db.Uuid
+  photo_url   String
+  uploaded_at DateTime @default(now())
+
+  expense Expense @relation(fields: [expense_id], references: [id], onDelete: Cascade)
+
+  @@map("expense_photos")
 }

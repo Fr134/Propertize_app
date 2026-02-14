@@ -91,6 +91,20 @@ export const updateLinenSchema = z.object({
 
 export type UpdateLinenInput = z.infer<typeof updateLinenSchema>;
 
+// --- Expense ---
+
+export const createExpenseSchema = z.object({
+  description: z.string().min(1, "Descrizione obbligatoria"),
+  amount: z.number().positive("L'importo deve essere maggiore di 0"),
+  vat_amount: z.number().min(0, "L'IVA non può essere negativa").optional(),
+  expense_date: z.string().optional(),
+}).refine(
+  (data) => !data.vat_amount || data.vat_amount <= data.amount,
+  { message: "L'IVA non può superare l'importo totale", path: ["vat_amount"] }
+);
+
+export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
+
 // --- Maintenance Report ---
 
 export const createReportSchema = z.object({
