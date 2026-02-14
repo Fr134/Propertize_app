@@ -46,7 +46,18 @@ export default function OperatorTaskDetailPage({
     }
   }
 
-  const completedCount = checklist.filter((i) => i.completed).length;
+  // Count total items: areas + all sub-tasks
+  const totalItems = checklist.reduce(
+    (sum, i) => sum + 1 + (i.subTasks?.length ?? 0),
+    0
+  );
+  const completedItems = checklist.reduce(
+    (sum, i) =>
+      sum +
+      (i.completed ? 1 : 0) +
+      (i.subTasks?.filter((st) => st.completed).length ?? 0),
+    0
+  );
 
   return (
     <div className="space-y-6">
@@ -111,7 +122,7 @@ export default function OperatorTaskDetailPage({
           <h2 className="text-lg font-semibold">Checklist</h2>
           {checklist.length > 0 && (
             <span className="text-sm text-muted-foreground">
-              {completedCount}/{checklist.length} completati
+              {completedItems}/{totalItems} completati
             </span>
           )}
         </div>

@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useProperty } from "@/hooks/use-properties";
 import { useCreateExpense } from "@/hooks/use-expenses";
 import { useUploadThing } from "@/lib/uploadthing-client";
@@ -24,6 +24,8 @@ export default function NewExpensePage({
   const { data: property, isLoading } = useProperty(propertyId);
   const createExpense = useCreateExpense(propertyId);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromOverview = searchParams.get("from") === "overview";
   const { toast } = useToast();
 
   const [description, setDescription] = useState("");
@@ -106,7 +108,11 @@ export default function NewExpensePage({
         description: `Spesa di ${parsedAmount.toFixed(2)}€ aggiunta.`,
       });
 
-      router.push(`/manager/properties/${propertyId}/accounting`);
+      router.push(
+        fromOverview
+          ? "/manager/accounting"
+          : `/manager/properties/${propertyId}/accounting`
+      );
     } catch (error) {
       console.error("Errore creazione spesa:", error);
       toast({
@@ -125,7 +131,13 @@ export default function NewExpensePage({
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
-          <Link href={`/manager/properties/${propertyId}/accounting`}>
+          <Link
+            href={
+              fromOverview
+                ? "/manager/accounting"
+                : `/manager/properties/${propertyId}/accounting`
+            }
+          >
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -245,7 +257,13 @@ export default function NewExpensePage({
 
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" asChild>
-                <Link href={`/manager/properties/${propertyId}/accounting`}>
+                <Link
+                  href={
+                    fromOverview
+                      ? "/manager/accounting"
+                      : `/manager/properties/${propertyId}/accounting`
+                  }
+                >
                   Annulla
                 </Link>
               </Button>

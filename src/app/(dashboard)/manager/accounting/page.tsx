@@ -234,7 +234,7 @@ function PropertySection({
               Totale spese: {formatCurrency(property.totalExpenses)}
             </p>
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/manager/properties/${property.id}/accounting/new`}>
+              <Link href={`/manager/properties/${property.id}/accounting/new?from=overview`}>
                 <Plus className="mr-1 h-3 w-3" />
                 Nuova spesa
               </Link>

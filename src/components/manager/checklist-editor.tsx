@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, GripVertical, Camera, Save } from "lucide-react";
+import { Plus, Trash2, GripVertical, Camera, Save, ListChecks, X } from "lucide-react";
 
 interface ChecklistEditorProps {
   propertyId: string;
@@ -20,7 +20,7 @@ export function ChecklistEditor({ propertyId, initialItems }: ChecklistEditorPro
   const updateChecklist = useUpdateChecklist(propertyId);
 
   function addItem() {
-    setItems([...items, { area: "", description: "", photo_required: false }]);
+    setItems([...items, { area: "", description: "", photo_required: false, subTasks: [] }]);
   }
 
   function removeItem(index: number) {
@@ -33,8 +33,37 @@ export function ChecklistEditor({ propertyId, initialItems }: ChecklistEditorPro
     setItems(updated);
   }
 
+  function addSubTask(areaIndex: number) {
+    const updated = [...items];
+    const subTasks = [...(updated[areaIndex].subTasks ?? [])];
+    subTasks.push({ id: crypto.randomUUID(), text: "" });
+    updated[areaIndex] = { ...updated[areaIndex], subTasks };
+    setItems(updated);
+  }
+
+  function removeSubTask(areaIndex: number, subTaskIndex: number) {
+    const updated = [...items];
+    const subTasks = [...(updated[areaIndex].subTasks ?? [])];
+    subTasks.splice(subTaskIndex, 1);
+    updated[areaIndex] = { ...updated[areaIndex], subTasks };
+    setItems(updated);
+  }
+
+  function updateSubTaskText(areaIndex: number, subTaskIndex: number, text: string) {
+    const updated = [...items];
+    const subTasks = [...(updated[areaIndex].subTasks ?? [])];
+    subTasks[subTaskIndex] = { ...subTasks[subTaskIndex], text };
+    updated[areaIndex] = { ...updated[areaIndex], subTasks };
+    setItems(updated);
+  }
+
   async function handleSave() {
-    const validItems = items.filter((item) => item.area.trim() && item.description.trim());
+    const validItems = items
+      .filter((item) => item.area.trim() && item.description.trim())
+      .map((item) => ({
+        ...item,
+        subTasks: (item.subTasks ?? []).filter((st) => st.text.trim()),
+      }));
     if (validItems.length === 0) return;
     try {
       await updateChecklist.mutateAsync({ items: validItems });
@@ -118,6 +147,41 @@ export function ChecklistEditor({ propertyId, initialItems }: ChecklistEditorPro
                       onChange={(e) => updateItem(index, "description", e.target.value)}
                       rows={2}
                     />
+                  </div>
+
+                  {/* Sub-tasks */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <ListChecks className="h-3.5 w-3.5 text-muted-foreground" />
+                      <Label className="text-xs">Punti checklist</Label>
+                    </div>
+                    {(item.subTasks ?? []).map((st, stIndex) => (
+                      <div key={st.id} className="flex items-center gap-2">
+                        <Input
+                          placeholder="Es. Pulire WC"
+                          value={st.text}
+                          onChange={(e) => updateSubTaskText(index, stIndex, e.target.value)}
+                          className="h-8 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeSubTask(index, stIndex)}
+                          className="shrink-0 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => addSubTask(index)}
+                      className="h-7 text-xs"
+                    >
+                      <Plus className="mr-1 h-3 w-3" />
+                      Aggiungi punto
+                    </Button>
                   </div>
                 </div>
                 <Button

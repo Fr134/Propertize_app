@@ -27,11 +27,12 @@ export async function PATCH(
     return json({ ...task, alreadyApplied: true });
   }
 
-  // Validate: all items completed, required photos uploaded
+  // Validate: all items completed, required photos uploaded, all sub-tasks done
   const checklistData = task.checklist_data as {
     completed: boolean;
     photo_required: boolean;
     photo_urls: string[];
+    subTasks?: { id: string; text: string; completed: boolean }[];
   }[] | null;
 
   if (checklistData) {
@@ -42,6 +43,15 @@ export async function PATCH(
       }
       if (item.photo_required && (!item.photo_urls || item.photo_urls.length === 0)) {
         return errorResponse(`Foto obbligatoria mancante per l'area ${i + 1}`);
+      }
+      if (item.subTasks && item.subTasks.length > 0) {
+        for (const st of item.subTasks) {
+          if (!st.completed) {
+            return errorResponse(
+              `Sub-task "${st.text}" nell'area ${i + 1} non completata`
+            );
+          }
+        }
       }
     }
   }

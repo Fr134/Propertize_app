@@ -22,10 +22,16 @@ export type CreatePropertyInput = z.infer<typeof createPropertySchema>;
 
 // --- Checklist Template ---
 
+export const subTaskTemplateSchema = z.object({
+  id: z.string().min(1),
+  text: z.string().min(1, "Testo sub-task obbligatorio"),
+});
+
 export const checklistTemplateItemSchema = z.object({
   area: z.string().min(1, "Nome area obbligatorio"),
   description: z.string().min(1, "Descrizione obbligatoria"),
   photo_required: z.boolean(),
+  subTasks: z.array(subTaskTemplateSchema).optional().default([]),
 });
 
 export const updateChecklistTemplateSchema = z.object({

@@ -71,20 +71,35 @@ export enum ReportStatus {
   RESOLVED = "RESOLVED",
 }
 
+// --- Sub-task types ---
+
+export interface SubTaskTemplate {
+  id: string;
+  text: string;
+}
+
+export interface SubTaskData {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 // --- Checklist Template Item ---
 
 export interface ChecklistTemplateItem {
   area: string;
   description: string;
   photo_required: boolean;
+  subTasks?: SubTaskTemplate[];
 }
 
 // --- Checklist Data (compiled during task) ---
 
-export interface ChecklistDataItem extends ChecklistTemplateItem {
+export interface ChecklistDataItem extends Omit<ChecklistTemplateItem, "subTasks"> {
   completed: boolean;
   photo_urls: string[];
   notes?: string;
+  subTasks?: SubTaskData[];
 }
 
 // --- API Response Types ---

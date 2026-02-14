@@ -84,11 +84,18 @@ export async function POST(req: Request) {
   // Build checklist_data from template
   const templateItems = property.checklist_template?.items;
   const checklistData = Array.isArray(templateItems)
-    ? (templateItems as { area: string; description: string; photo_required: boolean }[]).map((item) => ({
-        ...item,
+    ? (templateItems as { area: string; description: string; photo_required: boolean; subTasks?: { id: string; text: string }[] }[]).map((item) => ({
+        area: item.area,
+        description: item.description,
+        photo_required: item.photo_required,
         completed: false,
         photo_urls: [],
         notes: "",
+        subTasks: (item.subTasks ?? []).map((st) => ({
+          id: st.id,
+          text: st.text,
+          completed: false,
+        })),
       }))
     : null;
 

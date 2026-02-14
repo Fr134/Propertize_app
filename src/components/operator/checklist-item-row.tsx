@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useUpdateChecklistItem, useSaveTaskPhoto, type ChecklistDataItem } from "@/hooks/use-tasks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Camera, CheckCircle2, Circle, Upload, Loader2 } from "lucide-react";
+import { Camera, CheckCircle2, Circle, Upload, Loader2, Square, CheckSquare2 } from "lucide-react";
 
 interface ChecklistItemRowProps {
   taskId: string;
@@ -21,6 +21,16 @@ export function ChecklistItemRow({ taskId, index, item, disabled }: ChecklistIte
   async function toggleCompleted() {
     if (disabled) return;
     await updateItem.mutateAsync({ itemIndex: index, completed: !item.completed });
+  }
+
+  async function toggleSubTask(subTaskId: string, currentCompleted: boolean) {
+    if (disabled) return;
+    await updateItem.mutateAsync({
+      type: "AREA_SUBTASK_TOGGLE",
+      itemIndex: index,
+      subTaskId,
+      completed: !currentCompleted,
+    });
   }
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -43,6 +53,11 @@ export function ChecklistItemRow({ taskId, index, item, disabled }: ChecklistIte
       e.target.value = "";
     }
   }
+
+  const hasSubTasks = item.subTasks && item.subTasks.length > 0;
+  const subTasksCompleted = hasSubTasks
+    ? item.subTasks!.filter((st) => st.completed).length
+    : 0;
 
   return (
     <div className="rounded-md border p-3">
@@ -71,6 +86,37 @@ export function ChecklistItemRow({ taskId, index, item, disabled }: ChecklistIte
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+
+          {/* Sub-tasks */}
+          {hasSubTasks && (
+            <div className="mt-2 space-y-1.5 pl-1">
+              <p className="text-xs font-medium text-muted-foreground">
+                Punti checklist ({subTasksCompleted}/{item.subTasks!.length})
+              </p>
+              {item.subTasks!.map((st) => (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => toggleSubTask(st.id, st.completed)}
+                  disabled={disabled || updateItem.isPending}
+                  className="flex items-center gap-2 w-full text-left disabled:opacity-50"
+                >
+                  {st.completed ? (
+                    <CheckSquare2 className="h-4 w-4 text-green-600 shrink-0" />
+                  ) : (
+                    <Square className="h-4 w-4 text-muted-foreground shrink-0" />
+                  )}
+                  <span
+                    className={`text-sm ${
+                      st.completed ? "line-through text-muted-foreground" : ""
+                    }`}
+                  >
+                    {st.text}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Photos */}
           {item.photo_urls?.length > 0 && (

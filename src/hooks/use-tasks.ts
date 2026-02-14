@@ -26,6 +26,12 @@ interface TaskPhoto {
   uploaded_at: string;
 }
 
+interface SubTaskData {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 interface ChecklistDataItem {
   area: string;
   description: string;
@@ -33,6 +39,7 @@ interface ChecklistDataItem {
   completed: boolean;
   photo_urls: string[];
   notes: string;
+  subTasks?: SubTaskData[];
 }
 
 interface TaskListItem {
@@ -123,10 +130,14 @@ export function useStartTask() {
   });
 }
 
+type ChecklistUpdatePayload =
+  | { itemIndex: number; completed?: boolean; notes?: string }
+  | { type: "AREA_SUBTASK_TOGGLE"; itemIndex: number; subTaskId: string; completed: boolean };
+
 export function useUpdateChecklistItem(taskId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { itemIndex: number; completed?: boolean; notes?: string }) =>
+    mutationFn: (data: ChecklistUpdatePayload) =>
       fetchJson(`/api/tasks/${taskId}/checklist`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
