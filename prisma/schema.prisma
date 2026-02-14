@@ -241,9 +241,13 @@ model Expense {
   description  String
   amount       Decimal  @db.Decimal(10, 2)
   vat_amount   Decimal? @db.Decimal(10, 2)
-  expense_date DateTime @db.Date @default(now())
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  expense_date DateTime  @db.Date @default(now())
+  is_billed    Boolean   @default(false)
+  billed_at    DateTime?
+  is_paid      Boolean   @default(false)
+  paid_at      DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
 
   property Property       @relation(fields: [property_id], references: [id])
   author   User           @relation(fields: [created_by], references: [id])

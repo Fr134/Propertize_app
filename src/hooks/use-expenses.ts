@@ -25,9 +25,25 @@ interface Expense {
   amount: string; // Decimal comes as string from Prisma JSON
   vat_amount: string | null;
   expense_date: string;
+  is_billed: boolean;
+  billed_at: string | null;
+  is_paid: boolean;
+  paid_at: string | null;
   created_at: string;
   author: ExpenseAuthor;
   photos: ExpensePhoto[];
+}
+
+interface AccountingProperty {
+  id: string;
+  name: string;
+  code: string;
+  address: string;
+  expenseCount: number;
+  totalExpenses: number;
+  billedTotal: number;
+  paidTotal: number;
+  dueTotal: number;
 }
 
 // --- Hooks ---
@@ -38,6 +54,14 @@ export function useExpenses(propertyId: string) {
     queryFn: () =>
       fetchJson<Expense[]>(`/api/properties/${propertyId}/expenses`),
     enabled: !!propertyId,
+  });
+}
+
+export function useAccountingProperties() {
+  return useQuery({
+    queryKey: ["accounting", "properties"],
+    queryFn: () =>
+      fetchJson<AccountingProperty[]>("/api/accounting/properties"),
   });
 }
 
@@ -52,6 +76,29 @@ export function useCreateExpense(propertyId: string) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses", propertyId] });
+      queryClient.invalidateQueries({ queryKey: ["accounting"] });
+    },
+  });
+}
+
+export function useUpdateExpense() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      expenseId,
+      data,
+    }: {
+      expenseId: string;
+      data: { is_billed?: boolean; is_paid?: boolean };
+    }) =>
+      fetchJson(`/api/expenses/${expenseId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["accounting"] });
     },
   });
 }
@@ -71,4 +118,4 @@ export function useSaveExpensePhoto(expenseId: string, propertyId: string) {
   });
 }
 
-export type { Expense, ExpensePhoto };
+export type { Expense, ExpensePhoto, AccountingProperty };
