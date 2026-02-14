@@ -36,16 +36,25 @@ export async function POST(
   });
 
   // Also update checklist_data photo_urls
-  const checklistData = task.checklist_data as Record<string, unknown>[] | null;
-  if (checklistData && checklistItemIndex < checklistData.length) {
-    const urls = (checklistData[checklistItemIndex].photo_urls as string[]) || [];
-    urls.push(photoUrl);
-    checklistData[checklistItemIndex].photo_urls = urls;
+  // Handle both old array format and new object format
+  const raw = task.checklist_data;
+  if (raw) {
+    const isArray = Array.isArray(raw);
+    const areas = isArray
+      ? (raw as Record<string, unknown>[])
+      : ((raw as Record<string, unknown>).areas as Record<string, unknown>[] ?? []);
 
-    await prisma.cleaningTask.update({
-      where: { id },
-      data: { checklist_data: checklistData as unknown as import("@prisma/client").Prisma.InputJsonValue },
-    });
+    if (checklistItemIndex < areas.length) {
+      const urls = (areas[checklistItemIndex].photo_urls as string[]) || [];
+      urls.push(photoUrl);
+      areas[checklistItemIndex].photo_urls = urls;
+
+      const updatedData = isArray ? areas : raw;
+      await prisma.cleaningTask.update({
+        where: { id },
+        data: { checklist_data: updatedData as unknown as import("@prisma/client").Prisma.InputJsonValue },
+      });
+    }
   }
 
   return json(photo, 201);

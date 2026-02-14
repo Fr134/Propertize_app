@@ -82,21 +82,39 @@ export async function POST(req: Request) {
   }
 
   // Build checklist_data from template
-  const templateItems = property.checklist_template?.items;
-  const checklistData = Array.isArray(templateItems)
-    ? (templateItems as { area: string; description: string; photo_required: boolean; subTasks?: { id: string; text: string }[] }[]).map((item) => ({
-        area: item.area,
-        description: item.description,
-        photo_required: item.photo_required,
-        completed: false,
-        photo_urls: [],
-        notes: "",
-        subTasks: (item.subTasks ?? []).map((st) => ({
-          id: st.id,
-          text: st.text,
+  // Template can be old format (array) or new format ({ items, staySupplies })
+  const rawTemplate = property.checklist_template?.items;
+  type TemplateArea = { area: string; description: string; photo_required: boolean; subTasks?: { id: string; text: string }[] };
+  type TemplateSupply = { id: string; text: string };
+
+  const templateAreas: TemplateArea[] = Array.isArray(rawTemplate)
+    ? (rawTemplate as unknown as TemplateArea[])
+    : ((rawTemplate as Record<string, unknown>)?.items as TemplateArea[] ?? []);
+  const templateSupplies: TemplateSupply[] = Array.isArray(rawTemplate)
+    ? []
+    : ((rawTemplate as Record<string, unknown>)?.staySupplies as TemplateSupply[] ?? []);
+
+  const checklistData = templateAreas.length > 0
+    ? {
+        areas: templateAreas.map((item) => ({
+          area: item.area,
+          description: item.description,
+          photo_required: item.photo_required,
           completed: false,
+          photo_urls: [] as string[],
+          notes: "",
+          subTasks: (item.subTasks ?? []).map((st) => ({
+            id: st.id,
+            text: st.text,
+            completed: false,
+          })),
         })),
-      }))
+        staySupplies: templateSupplies.map((s) => ({
+          id: s.id,
+          text: s.text,
+          checked: false,
+        })),
+      }
     : null;
 
   const task = await prisma.cleaningTask.create({

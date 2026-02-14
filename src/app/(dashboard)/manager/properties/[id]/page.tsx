@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Receipt } from "lucide-react";
-import type { ChecklistTemplateItem } from "@/types";
+import type { ChecklistTemplateItem, StaySupplyTemplate } from "@/types";
 
 const propertyTypeLabels: Record<string, string> = {
   APPARTAMENTO: "Appartamento",
@@ -32,8 +32,14 @@ export default function PropertyDetailPage({
     return <p className="text-sm text-destructive">Immobile non trovato.</p>;
   }
 
-  const checklistItems: ChecklistTemplateItem[] =
-    (property.checklist_template?.items as ChecklistTemplateItem[]) ?? [];
+  // Normalize: old format is array, new format is { items, staySupplies }
+  const rawTemplate = property.checklist_template?.items;
+  const checklistItems: ChecklistTemplateItem[] = Array.isArray(rawTemplate)
+    ? (rawTemplate as ChecklistTemplateItem[])
+    : ((rawTemplate as Record<string, unknown>)?.items as ChecklistTemplateItem[] ?? []);
+  const staySupplies: StaySupplyTemplate[] = Array.isArray(rawTemplate)
+    ? []
+    : ((rawTemplate as Record<string, unknown>)?.staySupplies as StaySupplyTemplate[] ?? []);
 
   return (
     <div className="space-y-6">
@@ -85,7 +91,11 @@ export default function PropertyDetailPage({
         </Card>
       </div>
 
-      <ChecklistEditor propertyId={id} initialItems={checklistItems} />
+      <ChecklistEditor
+        propertyId={id}
+        initialItems={checklistItems}
+        initialStaySupplies={staySupplies}
+      />
     </div>
   );
 }

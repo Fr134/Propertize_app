@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { useTask, useStartTask, useCompleteTask } from "@/hooks/use-tasks";
+import { useTask, useStartTask, useCompleteTask, useUpdateChecklistItem, parseChecklist } from "@/hooks/use-tasks";
 import { ChecklistItemRow } from "@/components/operator/checklist-item-row";
 import { SupplyLevelSelector } from "@/components/operator/supply-level-selector";
 import { LinenStatusUpdater } from "@/components/operator/linen-status-updater";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, MapPin, Play, Send, RotateCcw } from "lucide-react";
+import { ArrowLeft, MapPin, Play, Send, RotateCcw, PackageCheck, Square, CheckSquare2 } from "lucide-react";
 
 export default function OperatorTaskDetailPage({
   params,
@@ -28,10 +28,11 @@ export default function OperatorTaskDetailPage({
   if (isLoading) return <p className="text-sm text-muted-foreground">Caricamento...</p>;
   if (!task) return <p className="text-sm text-destructive">Task non trovato.</p>;
 
-  const checklist = task.checklist_data ?? [];
+  const { areas: checklist, staySupplies } = parseChecklist(task.checklist_data);
   const isEditable = task.status === "IN_PROGRESS";
   const canStart = task.status === "TODO";
   const canComplete = task.status === "IN_PROGRESS";
+  const updateChecklist = useUpdateChecklistItem(id);
 
   async function handleStart() {
     await startTask.mutateAsync(id);
@@ -44,6 +45,15 @@ export default function OperatorTaskDetailPage({
     } catch (err) {
       setCompleteError(err instanceof Error ? err.message : "Errore");
     }
+  }
+
+  async function toggleSupply(supplyId: string, currentChecked: boolean) {
+    if (!isEditable) return;
+    await updateChecklist.mutateAsync({
+      type: "SUPPLY_TOGGLE",
+      supplyId,
+      checked: !currentChecked,
+    });
   }
 
   // Count total items: areas + all sub-tasks
@@ -143,6 +153,43 @@ export default function OperatorTaskDetailPage({
           </div>
         )}
       </div>
+
+      {/* Stay Supplies */}
+      {staySupplies.length > 0 && (
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <PackageCheck className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-lg font-semibold">Scorte soggiorno</h2>
+            <span className="text-sm text-muted-foreground">
+              {staySupplies.filter((s) => s.checked).length}/{staySupplies.length}
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            {staySupplies.map((supply) => (
+              <button
+                key={supply.id}
+                type="button"
+                onClick={() => toggleSupply(supply.id, supply.checked)}
+                disabled={!isEditable || updateChecklist.isPending}
+                className="flex items-center gap-2 w-full text-left rounded-md border p-2.5 disabled:opacity-50"
+              >
+                {supply.checked ? (
+                  <CheckSquare2 className="h-4 w-4 text-green-600 shrink-0" />
+                ) : (
+                  <Square className="h-4 w-4 text-muted-foreground shrink-0" />
+                )}
+                <span
+                  className={`text-sm ${
+                    supply.checked ? "line-through text-muted-foreground" : ""
+                  }`}
+                >
+                  {supply.text}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Supplies & Linen */}
       {(isEditable || task.status === "COMPLETED" || task.status === "APPROVED") && (

@@ -71,6 +71,19 @@ export enum ReportStatus {
   RESOLVED = "RESOLVED",
 }
 
+// --- Stay supply types ---
+
+export interface StaySupplyTemplate {
+  id: string;
+  text: string;
+}
+
+export interface StaySupplyData {
+  id: string;
+  text: string;
+  checked: boolean;
+}
+
 // --- Sub-task types ---
 
 export interface SubTaskTemplate {

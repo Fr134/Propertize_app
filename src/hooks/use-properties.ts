@@ -64,7 +64,9 @@ interface PropertyListItem {
 interface ChecklistTemplate {
   id: string;
   property_id: string;
-  items: { area: string; description: string; photo_required: boolean }[];
+  // New format: { items: [...], staySupplies: [...] }
+  // Old format (backward compat): plain array
+  items: unknown;
 }
 
 interface PropertyDetail {

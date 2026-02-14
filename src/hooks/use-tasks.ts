@@ -32,6 +32,12 @@ interface SubTaskData {
   completed: boolean;
 }
 
+interface StaySupplyData {
+  id: string;
+  text: string;
+  checked: boolean;
+}
+
 interface ChecklistDataItem {
   area: string;
   description: string;
@@ -55,8 +61,14 @@ interface TaskListItem {
   operator: TaskOperator;
 }
 
+// checklist_data can be old array format or new object format
+type ChecklistRaw =
+  | ChecklistDataItem[]
+  | { areas: ChecklistDataItem[]; staySupplies: StaySupplyData[] }
+  | null;
+
 interface TaskDetail extends TaskListItem {
-  checklist_data: ChecklistDataItem[] | null;
+  checklist_data: ChecklistRaw;
   reviewed_at: string | null;
   reviewed_by: string | null;
   rejection_notes: string | null;
@@ -132,7 +144,8 @@ export function useStartTask() {
 
 type ChecklistUpdatePayload =
   | { itemIndex: number; completed?: boolean; notes?: string }
-  | { type: "AREA_SUBTASK_TOGGLE"; itemIndex: number; subTaskId: string; completed: boolean };
+  | { type: "AREA_SUBTASK_TOGGLE"; itemIndex: number; subTaskId: string; completed: boolean }
+  | { type: "SUPPLY_TOGGLE"; supplyId: string; checked: boolean };
 
 export function useUpdateChecklistItem(taskId: string) {
   const queryClient = useQueryClient();
@@ -208,4 +221,17 @@ export function useReopenTask(taskId: string) {
   });
 }
 
-export type { TaskListItem, TaskDetail, TaskPhoto, ChecklistDataItem, TaskFilters };
+// Helper to normalize checklist_data (old array or new object format)
+export function parseChecklist(raw: ChecklistRaw): {
+  areas: ChecklistDataItem[];
+  staySupplies: StaySupplyData[];
+} {
+  if (!raw) return { areas: [], staySupplies: [] };
+  if (Array.isArray(raw)) return { areas: raw, staySupplies: [] };
+  return {
+    areas: raw.areas ?? [],
+    staySupplies: raw.staySupplies ?? [],
+  };
+}
+
+export type { TaskListItem, TaskDetail, TaskPhoto, ChecklistDataItem, StaySupplyData, TaskFilters };

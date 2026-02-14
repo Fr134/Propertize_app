@@ -28,16 +28,24 @@ export async function PATCH(
   }
 
   // Validate: all items completed, required photos uploaded, all sub-tasks done
-  const checklistData = task.checklist_data as {
+  // Handle both old array format and new object format
+  type AreaItem = {
     completed: boolean;
     photo_required: boolean;
     photo_urls: string[];
     subTasks?: { id: string; text: string; completed: boolean }[];
-  }[] | null;
+  };
 
-  if (checklistData) {
-    for (let i = 0; i < checklistData.length; i++) {
-      const item = checklistData[i];
+  const raw = task.checklist_data;
+  const areas: AreaItem[] | null = raw
+    ? Array.isArray(raw)
+      ? (raw as AreaItem[])
+      : ((raw as { areas?: AreaItem[] }).areas ?? null)
+    : null;
+
+  if (areas) {
+    for (let i = 0; i < areas.length; i++) {
+      const item = areas[i];
       if (!item.completed) {
         return errorResponse(`L'area ${i + 1} non e' stata completata`);
       }
@@ -55,6 +63,7 @@ export async function PATCH(
       }
     }
   }
+  // Note: staySupplies do NOT block completion (MVP)
 
   // Atomic conditional update
   const { count } = await prisma.cleaningTask.updateMany({

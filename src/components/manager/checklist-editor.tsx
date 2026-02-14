@@ -2,21 +2,23 @@
 
 import { useState } from "react";
 import { useUpdateChecklist } from "@/hooks/use-properties";
-import type { ChecklistTemplateItem } from "@/types";
+import type { ChecklistTemplateItem, StaySupplyTemplate } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, GripVertical, Camera, Save, ListChecks, X } from "lucide-react";
+import { Plus, Trash2, GripVertical, Camera, Save, ListChecks, X, PackageCheck } from "lucide-react";
 
 interface ChecklistEditorProps {
   propertyId: string;
   initialItems: ChecklistTemplateItem[];
+  initialStaySupplies?: StaySupplyTemplate[];
 }
 
-export function ChecklistEditor({ propertyId, initialItems }: ChecklistEditorProps) {
+export function ChecklistEditor({ propertyId, initialItems, initialStaySupplies = [] }: ChecklistEditorProps) {
   const [items, setItems] = useState<ChecklistTemplateItem[]>(initialItems);
+  const [staySupplies, setStaySupplies] = useState<StaySupplyTemplate[]>(initialStaySupplies);
   const updateChecklist = useUpdateChecklist(propertyId);
 
   function addItem() {
@@ -57,6 +59,21 @@ export function ChecklistEditor({ propertyId, initialItems }: ChecklistEditorPro
     setItems(updated);
   }
 
+  // --- Stay supply helpers ---
+  function addSupply() {
+    setStaySupplies([...staySupplies, { id: crypto.randomUUID(), text: "" }]);
+  }
+
+  function removeSupply(index: number) {
+    setStaySupplies(staySupplies.filter((_, i) => i !== index));
+  }
+
+  function updateSupplyText(index: number, text: string) {
+    const updated = [...staySupplies];
+    updated[index] = { ...updated[index], text };
+    setStaySupplies(updated);
+  }
+
   async function handleSave() {
     const validItems = items
       .filter((item) => item.area.trim() && item.description.trim())
@@ -65,8 +82,9 @@ export function ChecklistEditor({ propertyId, initialItems }: ChecklistEditorPro
         subTasks: (item.subTasks ?? []).filter((st) => st.text.trim()),
       }));
     if (validItems.length === 0) return;
+    const validSupplies = staySupplies.filter((s) => s.text.trim());
     try {
-      await updateChecklist.mutateAsync({ items: validItems });
+      await updateChecklist.mutateAsync({ items: validItems, staySupplies: validSupplies });
     } catch {
       // error shown via mutation state
     }
@@ -201,6 +219,42 @@ export function ChecklistEditor({ propertyId, initialItems }: ChecklistEditorPro
             </Button>
           </>
         )}
+        {/* Stay Supplies section */}
+        <div className="border-t pt-4 mt-4">
+          <div className="flex items-center gap-2 mb-3">
+            <PackageCheck className="h-4 w-4 text-muted-foreground" />
+            <Label className="text-sm font-semibold">Scorte soggiorno</Label>
+          </div>
+          <div className="space-y-2">
+            {staySupplies.map((supply, index) => (
+              <div key={supply.id} className="flex items-center gap-2">
+                <Input
+                  placeholder="Es. Carta igienica"
+                  value={supply.text}
+                  onChange={(e) => updateSupplyText(index, e.target.value)}
+                  className="h-8 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeSupply(index)}
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={addSupply}
+              className="h-7 text-xs"
+            >
+              <Plus className="mr-1 h-3 w-3" />
+              Aggiungi scorta
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

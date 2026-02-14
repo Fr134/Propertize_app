@@ -27,12 +27,17 @@ export async function PUT(
     return errorResponse(parsed.error.issues[0].message);
   }
 
+  const templateData = {
+    items: parsed.data.items,
+    staySupplies: parsed.data.staySupplies ?? [],
+  };
+
   const template = await prisma.checklistTemplate.upsert({
     where: { property_id: id },
-    update: { items: parsed.data.items },
+    update: { items: templateData },
     create: {
       property_id: id,
-      items: parsed.data.items,
+      items: templateData,
     },
   });
 

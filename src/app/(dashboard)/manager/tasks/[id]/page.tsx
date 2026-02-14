@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { useTask } from "@/hooks/use-tasks";
+import { useTask, parseChecklist } from "@/hooks/use-tasks";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ export default function ManagerTaskDetailPage({
   if (isLoading) return <p className="text-sm text-muted-foreground">Caricamento...</p>;
   if (!task) return <p className="text-sm text-destructive">Task non trovato.</p>;
 
-  const checklist = task.checklist_data ?? [];
+  const { areas: checklist } = parseChecklist(task.checklist_data);
   const canReview = task.status === "COMPLETED";
 
   const handleApprove = () => {
