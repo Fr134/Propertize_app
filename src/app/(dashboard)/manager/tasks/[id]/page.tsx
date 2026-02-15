@@ -1,13 +1,15 @@
 "use client";
 
 import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useTask, parseChecklist } from "@/hooks/use-tasks";
+import { useTask, useDeleteTask, parseChecklist } from "@/hooks/use-tasks";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, MapPin, User, Calendar, Camera, CheckCircle2, Circle, ThumbsUp, ThumbsDown, RotateCcw, CheckSquare2, Square, PackageCheck } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, MapPin, User, Calendar, Camera, CheckCircle2, Circle, ThumbsUp, ThumbsDown, RotateCcw, CheckSquare2, Square, PackageCheck, Trash2 } from "lucide-react";
 import { TaskReviewModal } from "@/components/manager/task-review-modal";
 import { TaskReopenModal } from "@/components/manager/task-reopen-modal";
 
@@ -25,10 +27,13 @@ export default function ManagerTaskDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
   const { data: task, isLoading } = useTask(id);
+  const deleteTask = useDeleteTask();
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [reviewMode, setReviewMode] = useState<"approve" | "reject">("approve");
   const [reopenModalOpen, setReopenModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Caricamento...</p>;
   if (!task) return <p className="text-sm text-destructive">Task non trovato.</p>;
@@ -44,6 +49,11 @@ export default function ManagerTaskDetailPage({
   const handleReject = () => {
     setReviewMode("reject");
     setReviewModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    await deleteTask.mutateAsync(id);
+    router.push("/manager/tasks");
   };
 
   return (
@@ -78,6 +88,14 @@ export default function ManagerTaskDetailPage({
               Riapri
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-destructive"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -262,6 +280,29 @@ export default function ManagerTaskDetailPage({
         isOpen={reopenModalOpen}
         onClose={() => setReopenModalOpen(false)}
       />
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Elimina task</DialogTitle>
+            <DialogDescription>
+              Sei sicuro di voler eliminare questo task? L&apos;azione non può essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Annulla
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteTask.isPending}
+            >
+              {deleteTask.isPending ? "Eliminazione..." : "Elimina"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

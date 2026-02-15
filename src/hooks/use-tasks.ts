@@ -205,6 +205,17 @@ export function useReviewTask(taskId: string) {
   });
 }
 
+export function useDeleteTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (taskId: string) =>
+      fetchJson(`/api/tasks/${taskId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
+
 export function useReopenTask(taskId: string) {
   const queryClient = useQueryClient();
   return useMutation({
