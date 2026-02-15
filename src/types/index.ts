@@ -71,6 +71,15 @@ export enum ReportStatus {
   RESOLVED = "RESOLVED",
 }
 
+// --- Owner ---
+
+export interface Owner {
+  id: string;
+  name: string;
+  email: string | null;
+  created_at: string;
+}
+
 // --- Stay supply types ---
 
 export interface StaySupplyTemplate {

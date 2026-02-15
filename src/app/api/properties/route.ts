@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
         _count: {
           select: { cleaning_tasks: true },
         },
+        owner: { select: { id: true, name: true } },
       },
       take: limit,
       skip,
@@ -50,7 +51,13 @@ export async function POST(req: Request) {
   }
 
   const property = await prisma.property.create({
-    data: parsed.data,
+    data: {
+      name: parsed.data.name,
+      code: parsed.data.code,
+      address: parsed.data.address,
+      property_type: parsed.data.property_type,
+      owner_id: parsed.data.owner_id || null,
+    },
   });
 
   return json(property, 201);

@@ -118,4 +118,37 @@ export function useSaveExpensePhoto(expenseId: string, propertyId: string) {
   });
 }
 
-export type { Expense, ExpensePhoto, AccountingProperty };
+// --- Accounting Owners ---
+
+interface AccountingOwnerProperty {
+  id: string;
+  name: string;
+  code: string;
+  expenseCount: number;
+  totalExpenses: number;
+  billedTotal: number;
+  paidTotal: number;
+  dueTotal: number;
+}
+
+interface AccountingOwner {
+  id: string;
+  name: string;
+  email: string | null;
+  propertyCount: number;
+  properties: AccountingOwnerProperty[];
+  totalExpenses: number;
+  billedTotal: number;
+  paidTotal: number;
+  dueTotal: number;
+}
+
+export function useAccountingOwners() {
+  return useQuery({
+    queryKey: ["accounting", "owners"],
+    queryFn: () =>
+      fetchJson<AccountingOwner[]>("/api/accounting/owners"),
+  });
+}
+
+export type { Expense, ExpensePhoto, AccountingProperty, AccountingOwner, AccountingOwnerProperty };

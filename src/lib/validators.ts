@@ -16,9 +16,26 @@ export const createPropertySchema = z.object({
   code: z.string().min(1, "Codice obbligatorio"),
   address: z.string().min(1, "Indirizzo obbligatorio"),
   property_type: z.enum(["APPARTAMENTO", "VILLA", "ALTRO"]),
+  owner_id: z.string().uuid("ID proprietario non valido").optional().or(z.literal("")),
 });
 
 export type CreatePropertyInput = z.infer<typeof createPropertySchema>;
+
+// --- Owner ---
+
+export const createOwnerSchema = z.object({
+  name: z.string().min(1, "Nome proprietario obbligatorio"),
+  email: z.string().email("Email non valida").optional().or(z.literal("")),
+});
+
+export type CreateOwnerInput = z.infer<typeof createOwnerSchema>;
+
+export const updateOwnerSchema = z.object({
+  name: z.string().min(1, "Nome proprietario obbligatorio").optional(),
+  email: z.string().email("Email non valida").optional().or(z.literal("")),
+});
+
+export type UpdateOwnerInput = z.infer<typeof updateOwnerSchema>;
 
 // --- Checklist Template ---
 

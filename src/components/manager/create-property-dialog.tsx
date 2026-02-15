@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createPropertySchema, type CreatePropertyInput } from "@/lib/validators";
 import { useCreateProperty } from "@/hooks/use-properties";
+import { useOwners, useCreateOwner } from "@/hooks/use-owners";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +30,11 @@ import { Plus } from "lucide-react";
 
 export function CreatePropertyDialog() {
   const [open, setOpen] = useState(false);
+  const [creatingOwner, setCreatingOwner] = useState(false);
+  const [newOwnerName, setNewOwnerName] = useState("");
   const createProperty = useCreateProperty();
+  const { data: owners } = useOwners();
+  const createOwner = useCreateOwner();
   const { toast } = useToast();
 
   const form = useForm<CreatePropertyInput>({
@@ -39,6 +44,7 @@ export function CreatePropertyDialog() {
       code: "",
       address: "",
       property_type: "APPARTAMENTO",
+      owner_id: "",
     },
   });
 
@@ -61,6 +67,22 @@ export function CreatePropertyDialog() {
         variant: "destructive",
         title: "Errore",
         description: "Si è verificato un errore durante la creazione dell'immobile.",
+      });
+    }
+  }
+
+  async function handleCreateOwner() {
+    if (!newOwnerName.trim()) return;
+    try {
+      const result = await createOwner.mutateAsync({ name: newOwnerName.trim() });
+      form.setValue("owner_id", result.id);
+      setNewOwnerName("");
+      setCreatingOwner(false);
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Errore nella creazione del proprietario.",
       });
     }
   }
@@ -121,6 +143,63 @@ export function CreatePropertyDialog() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Proprietario</Label>
+            {!creatingOwner ? (
+              <div className="flex gap-2">
+                <Select
+                  value={form.watch("owner_id") || ""}
+                  onValueChange={(v) => form.setValue("owner_id", v)}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Seleziona proprietario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {owners?.map((owner) => (
+                      <SelectItem key={owner.id} value={owner.id}>
+                        {owner.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCreatingOwner(true)}
+                  title="Nuovo proprietario"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nome nuovo proprietario"
+                  value={newOwnerName}
+                  onChange={(e) => setNewOwnerName(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!newOwnerName.trim() || createOwner.isPending}
+                  onClick={handleCreateOwner}
+                >
+                  {createOwner.isPending ? "..." : "Salva"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setCreatingOwner(false); setNewOwnerName(""); }}
+                >
+                  Annulla
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

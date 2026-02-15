@@ -102,15 +102,28 @@ model User {
   @@map("users")
 }
 
+model Owner {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  email      String?
+  created_at DateTime @default(now())
+
+  properties Property[]
+
+  @@map("owners")
+}
+
 model Property {
   id            String       @id @default(uuid()) @db.Uuid
   name          String
   code          String       @unique
   address       String
   property_type PropertyType
+  owner_id      String?      @db.Uuid
   created_at    DateTime     @default(now())
   updated_at    DateTime     @updatedAt
 
+  owner              Owner?             @relation(fields: [owner_id], references: [id])
   checklist_template ChecklistTemplate?
   cleaning_tasks     CleaningTask[]
   supply_levels      SupplyLevel[]

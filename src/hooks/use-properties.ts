@@ -31,6 +31,7 @@ export function useCreateProperty() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["properties"] });
+      queryClient.invalidateQueries({ queryKey: ["owners"] });
     },
   });
 }
@@ -59,6 +60,7 @@ interface PropertyListItem {
   property_type: string;
   created_at: string;
   _count: { cleaning_tasks: number };
+  owner: { id: string; name: string } | null;
 }
 
 interface ChecklistTemplate {
