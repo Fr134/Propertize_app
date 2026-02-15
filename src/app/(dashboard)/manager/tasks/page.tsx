@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { useTasks } from "@/hooks/use-tasks";
+import { useTasks, useDeleteTask } from "@/hooks/use-tasks";
 import { CreateTaskDialog } from "@/components/manager/create-task-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -13,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Trash2 } from "lucide-react";
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("it-IT", {
@@ -25,6 +28,8 @@ function formatDate(dateStr: string) {
 
 export default function ManagerTasksPage() {
   const { data: tasks, isLoading } = useTasks();
+  const deleteTask = useDeleteTask();
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   return (
     <div className="space-y-6">
@@ -51,6 +56,7 @@ export default function ManagerTasksPage() {
                 <TableHead>Operatrice</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Stato</TableHead>
+                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -76,12 +82,49 @@ export default function ManagerTasksPage() {
                   <TableCell>
                     <StatusBadge status={task.status} />
                   </TableCell>
+                  <TableCell>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setDeleteId(task.id); }}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
       )}
+
+      <Dialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Elimina task</DialogTitle>
+            <DialogDescription>
+              Sei sicuro di voler eliminare questo task? L&apos;azione non può essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>
+              Annulla
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteTask.isPending}
+              onClick={async () => {
+                if (deleteId) {
+                  await deleteTask.mutateAsync(deleteId);
+                  setDeleteId(null);
+                }
+              }}
+            >
+              {deleteTask.isPending ? "Eliminazione..." : "Elimina"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
