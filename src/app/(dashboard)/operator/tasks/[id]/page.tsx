@@ -23,6 +23,7 @@ export default function OperatorTaskDetailPage({
   const { data: task, isLoading } = useTask(id);
   const startTask = useStartTask();
   const completeTask = useCompleteTask();
+  const updateChecklist = useUpdateChecklistItem(id);
   const [completeError, setCompleteError] = useState("");
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Caricamento...</p>;
@@ -32,7 +33,6 @@ export default function OperatorTaskDetailPage({
   const isEditable = task.status === "IN_PROGRESS";
   const canStart = task.status === "TODO";
   const canComplete = task.status === "IN_PROGRESS";
-  const updateChecklist = useUpdateChecklistItem(id);
 
   async function handleStart() {
     await startTask.mutateAsync(id);

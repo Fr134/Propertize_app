@@ -7,7 +7,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, MapPin, User, Calendar, Camera, CheckCircle2, Circle, ThumbsUp, ThumbsDown, RotateCcw } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Camera, CheckCircle2, Circle, ThumbsUp, ThumbsDown, RotateCcw, CheckSquare2, Square, PackageCheck } from "lucide-react";
 import { TaskReviewModal } from "@/components/manager/task-review-modal";
 import { TaskReopenModal } from "@/components/manager/task-reopen-modal";
 
@@ -33,7 +33,7 @@ export default function ManagerTaskDetailPage({
   if (isLoading) return <p className="text-sm text-muted-foreground">Caricamento...</p>;
   if (!task) return <p className="text-sm text-destructive">Task non trovato.</p>;
 
-  const { areas: checklist } = parseChecklist(task.checklist_data);
+  const { areas: checklist, staySupplies } = parseChecklist(task.checklist_data);
   const canReview = task.status === "COMPLETED";
 
   const handleApprove = () => {
@@ -168,6 +168,32 @@ export default function ManagerTaskDetailPage({
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">{item.description}</p>
+
+                  {/* Sub-tasks */}
+                  {item.subTasks && item.subTasks.length > 0 && (
+                    <div className="mt-2 space-y-1 pl-1">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Punti checklist ({item.subTasks.filter((st) => st.completed).length}/{item.subTasks.length})
+                      </p>
+                      {item.subTasks.map((st) => (
+                        <div key={st.id} className="flex items-center gap-2">
+                          {st.completed ? (
+                            <CheckSquare2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                          ) : (
+                            <Square className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          )}
+                          <span
+                            className={`text-xs ${
+                              st.completed ? "line-through text-muted-foreground" : ""
+                            }`}
+                          >
+                            {st.text}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {item.photo_urls?.length > 0 && (
                     <div className="mt-2 flex gap-2 flex-wrap">
                       {item.photo_urls.map((url, pi) => (
@@ -190,6 +216,39 @@ export default function ManagerTaskDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {/* Stay Supplies */}
+      {staySupplies.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PackageCheck className="h-4 w-4" />
+              Scorte soggiorno
+              <span className="text-sm font-normal text-muted-foreground">
+                {staySupplies.filter((s) => s.checked).length}/{staySupplies.length}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1.5">
+            {staySupplies.map((supply) => (
+              <div key={supply.id} className="flex items-center gap-2 rounded-md border p-2.5">
+                {supply.checked ? (
+                  <CheckSquare2 className="h-4 w-4 text-green-600 shrink-0" />
+                ) : (
+                  <Square className="h-4 w-4 text-muted-foreground shrink-0" />
+                )}
+                <span
+                  className={`text-sm ${
+                    supply.checked ? "line-through text-muted-foreground" : ""
+                  }`}
+                >
+                  {supply.text}
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <TaskReviewModal
         taskId={id}
