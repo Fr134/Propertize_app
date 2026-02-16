@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, MapPin, User, Calendar, Camera, CheckCircle2, Circle, ThumbsUp, ThumbsDown, RotateCcw, CheckSquare2, Square, PackageCheck, Trash2 } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Camera, CheckCircle2, Circle, ThumbsUp, ThumbsDown, RotateCcw, CheckSquare2, Square, PackageCheck, Trash2, Package } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TaskReviewModal } from "@/components/manager/task-review-modal";
 import { TaskReopenModal } from "@/components/manager/task-reopen-modal";
 
@@ -264,6 +265,43 @@ export default function ManagerTaskDetailPage({
                 </span>
               </div>
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Supply Usages (consumption) */}
+      {task.supply_usages && task.supply_usages.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Consumi registrati
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Articolo</TableHead>
+                    <TableHead className="text-right">Previsto</TableHead>
+                    <TableHead className="text-right">Usato</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {task.supply_usages.map((usage) => (
+                    <TableRow key={usage.id}>
+                      <TableCell className="font-medium">
+                        {usage.supply_item.name}
+                        <span className="ml-1 text-xs text-muted-foreground">({usage.supply_item.unit})</span>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">{usage.expected_qty}</TableCell>
+                      <TableCell className="text-right tabular-nums">{usage.qty_used}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}

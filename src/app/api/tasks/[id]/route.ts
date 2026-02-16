@@ -18,6 +18,10 @@ export async function GET(
       operator: { select: { id: true, first_name: true, last_name: true, email: true } },
       reviewer: { select: { id: true, first_name: true, last_name: true } },
       photos: { orderBy: { checklist_item_index: "asc" } },
+      supply_usages: {
+        include: { supply_item: { select: { name: true, unit: true } } },
+        orderBy: { created_at: "asc" },
+      },
     },
   });
 
@@ -51,6 +55,7 @@ export async function DELETE(
   // Delete related records first, then the task
   await prisma.$transaction([
     prisma.taskPhoto.deleteMany({ where: { task_id: id } }),
+    prisma.cleaningTaskSupplyUsage.deleteMany({ where: { task_id: id } }),
     prisma.maintenanceReport.updateMany({ where: { task_id: id }, data: { task_id: null } }),
     prisma.cleaningTask.delete({ where: { id } }),
   ]);

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { SupplyUsageRow } from "@/components/operator/supply-usage-row";
 import { ArrowLeft, MapPin, Play, Send, RotateCcw, PackageCheck, Square, CheckSquare2 } from "lucide-react";
 
 export default function OperatorTaskDetailPage({
@@ -53,6 +54,16 @@ export default function OperatorTaskDetailPage({
       type: "SUPPLY_TOGGLE",
       supplyId,
       checked: !currentChecked,
+    });
+  }
+
+  async function handleSupplyUsageUpdate(supplyId: string, checked: boolean, qtyUsed: number) {
+    if (!isEditable) return;
+    await updateChecklist.mutateAsync({
+      type: "SUPPLY_QTY_UPDATE",
+      supplyId,
+      checked,
+      qtyUsed,
     });
   }
 
@@ -165,28 +176,37 @@ export default function OperatorTaskDetailPage({
             </span>
           </div>
           <div className="space-y-1.5">
-            {staySupplies.map((supply) => (
-              <button
-                key={supply.id}
-                type="button"
-                onClick={() => toggleSupply(supply.id, supply.checked)}
-                disabled={!isEditable || updateChecklist.isPending}
-                className="flex items-center gap-2 w-full text-left rounded-md border p-2.5 disabled:opacity-50"
-              >
-                {supply.checked ? (
-                  <CheckSquare2 className="h-4 w-4 text-green-600 shrink-0" />
-                ) : (
-                  <Square className="h-4 w-4 text-muted-foreground shrink-0" />
-                )}
-                <span
-                  className={`text-sm ${
-                    supply.checked ? "line-through text-muted-foreground" : ""
-                  }`}
+            {staySupplies.map((supply) =>
+              supply.supplyItemId ? (
+                <SupplyUsageRow
+                  key={supply.id}
+                  supply={supply}
+                  onUpdate={handleSupplyUsageUpdate}
+                  disabled={!isEditable || updateChecklist.isPending}
+                />
+              ) : (
+                <button
+                  key={supply.id}
+                  type="button"
+                  onClick={() => toggleSupply(supply.id, supply.checked)}
+                  disabled={!isEditable || updateChecklist.isPending}
+                  className="flex items-center gap-2 w-full text-left rounded-md border p-2.5 disabled:opacity-50"
                 >
-                  {supply.text}
-                </span>
-              </button>
-            ))}
+                  {supply.checked ? (
+                    <CheckSquare2 className="h-4 w-4 text-green-600 shrink-0" />
+                  ) : (
+                    <Square className="h-4 w-4 text-muted-foreground shrink-0" />
+                  )}
+                  <span
+                    className={`text-sm ${
+                      supply.checked ? "line-through text-muted-foreground" : ""
+                    }`}
+                  >
+                    {supply.text}
+                  </span>
+                </button>
+              )
+            )}
           </div>
         </div>
       )}

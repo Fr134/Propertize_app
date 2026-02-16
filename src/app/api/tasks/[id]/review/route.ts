@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { json, errorResponse, requireManager } from "@/lib/api-utils";
 import { reviewTaskSchema } from "@/lib/validators";
+import { postConsumptionTx } from "@/lib/inventory";
 import { type NextRequest } from "next/server";
 
 /**
  * PATCH /api/tasks/[id]/review
  * Approva o rigetta una task completata (solo MANAGER)
- * Atomic: only transitions COMPLETED -> APPROVED|REJECTED
+ * On APPROVED: posts consumption transactions atomically.
  */
 export async function PATCH(
   req: NextRequest,
@@ -23,30 +24,34 @@ export async function PATCH(
     return errorResponse(parsed.error.issues[0].message, 400);
   }
 
-  // Atomic conditional update: only if status is COMPLETED
-  const { count } = await prisma.cleaningTask.updateMany({
-    where: { id, status: "COMPLETED" },
-    data: {
-      status: parsed.data.status,
-      reviewed_at: new Date(),
-      reviewed_by: session!.user.id,
-      rejection_notes: parsed.data.status === "REJECTED" ? parsed.data.notes : null,
-    },
-  });
-
-  if (count === 0) {
-    const task = await prisma.cleaningTask.findUnique({ where: { id } });
-    if (!task) return errorResponse("Task non trovata", 404);
+  const task = await prisma.cleaningTask.findUnique({ where: { id } });
+  if (!task) return errorResponse("Task non trovata", 404);
+  if (task.status !== "COMPLETED") {
     // Already reviewed — idempotent response
     return json({ ...task, alreadyApplied: true });
   }
 
-  const updatedTask = await prisma.cleaningTask.findUnique({
-    where: { id },
-    include: {
-      property: { select: { id: true, name: true, code: true } },
-      operator: { select: { id: true, first_name: true, last_name: true } },
-    },
+  const updatedTask = await prisma.$transaction(async (tx) => {
+    const updated = await tx.cleaningTask.update({
+      where: { id },
+      data: {
+        status: parsed.data.status,
+        reviewed_at: new Date(),
+        reviewed_by: session!.user.id,
+        rejection_notes: parsed.data.status === "REJECTED" ? parsed.data.notes : null,
+      },
+      include: {
+        property: { select: { id: true, name: true, code: true } },
+        operator: { select: { id: true, first_name: true, last_name: true } },
+      },
+    });
+
+    // Post consumption transactions on approval
+    if (parsed.data.status === "APPROVED") {
+      await postConsumptionTx(tx, id, session!.user.id);
+    }
+
+    return updated;
   });
 
   return json(updatedTask);

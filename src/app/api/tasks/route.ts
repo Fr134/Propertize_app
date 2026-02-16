@@ -85,7 +85,7 @@ export async function POST(req: Request) {
   // Template can be old format (array) or new format ({ items, staySupplies })
   const rawTemplate = property.checklist_template?.items;
   type TemplateArea = { area: string; description: string; photo_required: boolean; subTasks?: { id: string; text: string }[] };
-  type TemplateSupply = { id: string; text: string };
+  type TemplateSupply = { id: string; text: string; supplyItemId?: string | null; expectedQty?: number };
 
   const templateAreas: TemplateArea[] = Array.isArray(rawTemplate)
     ? (rawTemplate as unknown as TemplateArea[])
@@ -113,22 +113,42 @@ export async function POST(req: Request) {
           id: s.id,
           text: s.text,
           checked: false,
+          ...(s.supplyItemId ? { supplyItemId: s.supplyItemId, expectedQty: s.expectedQty ?? 1, qtyUsed: 0 } : {}),
         })),
       }
     : null;
 
-  const task = await prisma.cleaningTask.create({
-    data: {
-      property_id: parsed.data.property_id,
-      assigned_to: parsed.data.assigned_to,
-      scheduled_date: new Date(parsed.data.scheduled_date),
-      notes: parsed.data.notes,
-      checklist_data: checklistData ?? undefined,
-    },
-    include: {
-      property: { select: { id: true, name: true, code: true } },
-      operator: { select: { id: true, first_name: true, last_name: true } },
-    },
+  // Collect supply items that need CleaningTaskSupplyUsage rows
+  const linkedSupplies = templateSupplies.filter((s) => s.supplyItemId);
+
+  const task = await prisma.$transaction(async (tx) => {
+    const created = await tx.cleaningTask.create({
+      data: {
+        property_id: parsed.data.property_id,
+        assigned_to: parsed.data.assigned_to,
+        scheduled_date: new Date(parsed.data.scheduled_date),
+        notes: parsed.data.notes,
+        checklist_data: checklistData ?? undefined,
+      },
+      include: {
+        property: { select: { id: true, name: true, code: true } },
+        operator: { select: { id: true, first_name: true, last_name: true } },
+      },
+    });
+
+    // Create supply usage rows for linked supplies
+    if (linkedSupplies.length > 0) {
+      await tx.cleaningTaskSupplyUsage.createMany({
+        data: linkedSupplies.map((s) => ({
+          task_id: created.id,
+          supply_item_id: s.supplyItemId!,
+          expected_qty: s.expectedQty ?? 1,
+          qty_used: 0,
+        })),
+      });
+    }
+
+    return created;
   });
 
   return json(task, 201);

@@ -85,12 +85,17 @@ export interface Owner {
 export interface StaySupplyTemplate {
   id: string;
   text: string;
+  supplyItemId?: string | null;
+  expectedQty?: number;
 }
 
 export interface StaySupplyData {
   id: string;
   text: string;
   checked: boolean;
+  supplyItemId?: string | null;
+  expectedQty?: number;
+  qtyUsed?: number;
 }
 
 // --- Sub-task types ---
@@ -136,6 +141,101 @@ export interface PaginatedResponse<T> {
   total: number;
   page: number;
   pageSize: number;
+}
+
+// --- Inventory ---
+
+export enum TransactionType {
+  PURCHASE_IN = "PURCHASE_IN",
+  CONSUMPTION_OUT = "CONSUMPTION_OUT",
+  ADJUSTMENT = "ADJUSTMENT",
+}
+
+export enum PurchaseOrderStatus {
+  DRAFT = "DRAFT",
+  ORDERED = "ORDERED",
+  RECEIVED = "RECEIVED",
+  CANCELLED = "CANCELLED",
+}
+
+export interface SupplyItem {
+  id: string;
+  name: string;
+  sku: string | null;
+  unit: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface InventoryBalanceItem {
+  id: string;
+  supply_item_id: string;
+  qty_on_hand: number;
+  reorder_point: number;
+  supply_item: SupplyItem;
+}
+
+export interface InventoryTransactionItem {
+  id: string;
+  supply_item_id: string;
+  type: TransactionType;
+  qty: number;
+  reference_id: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  supply_item: { name: string; unit: string };
+}
+
+export interface TaskSupplyUsageItem {
+  id: string;
+  task_id: string;
+  supply_item_id: string;
+  expected_qty: number;
+  qty_used: number;
+  supply_item: { name: string; unit: string };
+}
+
+export interface PurchaseOrderListItem {
+  id: string;
+  order_ref: string | null;
+  status: PurchaseOrderStatus;
+  notes: string | null;
+  ordered_at: string | null;
+  received_at: string | null;
+  created_at: string;
+  _count: { lines: number };
+}
+
+export interface PurchaseOrderDetail extends Omit<PurchaseOrderListItem, "_count"> {
+  lines: PurchaseOrderLineItem[];
+}
+
+export interface PurchaseOrderLineItem {
+  id: string;
+  supply_item_id: string;
+  qty_ordered: number;
+  qty_received: number;
+  unit_cost: number | null;
+  supply_item: { name: string; unit: string };
+}
+
+export interface ConsumptionSummaryItem {
+  supply_item_id: string;
+  name: string;
+  unit: string;
+  total_consumed: number;
+  task_count: number;
+}
+
+export interface ForecastItem {
+  supply_item_id: string;
+  name: string;
+  unit: string;
+  qty_on_hand: number;
+  avg_daily_consumption: number;
+  days_remaining: number | null;
+  needs_reorder: boolean;
 }
 
 // --- Dashboard KPI ---

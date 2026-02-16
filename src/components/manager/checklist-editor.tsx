@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useUpdateChecklist } from "@/hooks/use-properties";
+import { useSupplyItems } from "@/hooks/use-inventory";
 import type { ChecklistTemplateItem, StaySupplyTemplate } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, GripVertical, Camera, Save, ListChecks, X, PackageCheck } from "lucide-react";
 
 interface ChecklistEditorProps {
@@ -20,6 +22,7 @@ export function ChecklistEditor({ propertyId, initialItems, initialStaySupplies 
   const [items, setItems] = useState<ChecklistTemplateItem[]>(initialItems);
   const [staySupplies, setStaySupplies] = useState<StaySupplyTemplate[]>(initialStaySupplies);
   const updateChecklist = useUpdateChecklist(propertyId);
+  const { data: catalogItems } = useSupplyItems({ active: true });
 
   function addItem() {
     setItems([...items, { area: "", description: "", photo_required: false, subTasks: [] }]);
@@ -74,6 +77,28 @@ export function ChecklistEditor({ propertyId, initialItems, initialStaySupplies 
     setStaySupplies(updated);
   }
 
+  function updateSupplyItem(index: number, supplyItemId: string | null) {
+    const updated = [...staySupplies];
+    if (supplyItemId) {
+      const item = catalogItems?.find((i) => i.id === supplyItemId);
+      updated[index] = {
+        ...updated[index],
+        supplyItemId,
+        text: updated[index].text || item?.name || "",
+        expectedQty: updated[index].expectedQty ?? 1,
+      };
+    } else {
+      updated[index] = { ...updated[index], supplyItemId: null, expectedQty: undefined };
+    }
+    setStaySupplies(updated);
+  }
+
+  function updateSupplyExpectedQty(index: number, qty: number) {
+    const updated = [...staySupplies];
+    updated[index] = { ...updated[index], expectedQty: qty };
+    setStaySupplies(updated);
+  }
+
   async function handleSave() {
     const validItems = items
       .filter((item) => item.area.trim() && item.description.trim())
@@ -82,7 +107,9 @@ export function ChecklistEditor({ propertyId, initialItems, initialStaySupplies 
         subTasks: (item.subTasks ?? []).filter((st) => st.text.trim()),
       }));
     if (validItems.length === 0) return;
-    const validSupplies = staySupplies.filter((s) => s.text.trim());
+    const validSupplies = staySupplies
+      .filter((s) => s.text.trim())
+      .map((s) => ({ ...s, expectedQty: s.expectedQty ?? 1 }));
     try {
       await updateChecklist.mutateAsync({ items: validItems, staySupplies: validSupplies });
     } catch {
@@ -232,8 +259,32 @@ export function ChecklistEditor({ propertyId, initialItems, initialStaySupplies 
                   placeholder="Es. Carta igienica"
                   value={supply.text}
                   onChange={(e) => updateSupplyText(index, e.target.value)}
-                  className="h-8 text-sm"
+                  className="h-8 text-sm flex-1"
                 />
+                <Select
+                  value={supply.supplyItemId ?? "none"}
+                  onValueChange={(v) => updateSupplyItem(index, v === "none" ? null : v)}
+                >
+                  <SelectTrigger className="w-36 h-8 text-xs">
+                    <SelectValue placeholder="Articolo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nessuno</SelectItem>
+                    {catalogItems?.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {supply.supplyItemId && (
+                  <Input
+                    type="number"
+                    min={1}
+                    value={supply.expectedQty ?? 1}
+                    onChange={(e) => updateSupplyExpectedQty(index, parseInt(e.target.value) || 1)}
+                    className="h-8 w-16 text-sm"
+                    title="Quantità prevista"
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => removeSupply(index)}

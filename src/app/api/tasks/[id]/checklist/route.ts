@@ -66,6 +66,47 @@ export async function PATCH(
 
   const { areas, staySupplies, isObject } = parseChecklistData(task.checklist_data);
 
+  // --- SUPPLY_QTY_UPDATE: update qty on a linked supply ---
+  if (body.type === "SUPPLY_QTY_UPDATE") {
+    const { supplyId, checked, qtyUsed } = body as {
+      supplyId: string;
+      checked: boolean;
+      qtyUsed: number;
+    };
+
+    if (!supplyId || typeof checked !== "boolean" || typeof qtyUsed !== "number") {
+      return errorResponse("supplyId, checked e qtyUsed sono richiesti");
+    }
+
+    const supplyIndex = staySupplies.findIndex((s) => s.id === supplyId);
+    if (supplyIndex === -1) {
+      return errorResponse("Scorta non trovata");
+    }
+
+    staySupplies[supplyIndex].checked = checked;
+    staySupplies[supplyIndex].qtyUsed = qtyUsed;
+
+    // Update JSON + upsert supply usage row
+    const supplyItemId = staySupplies[supplyIndex].supplyItemId as string | undefined;
+
+    const updated = await prisma.cleaningTask.update({
+      where: { id },
+      data: {
+        checklist_data: serializeChecklistData(areas, staySupplies, isObject) as unknown as import("@prisma/client").Prisma.InputJsonValue,
+      },
+    });
+
+    if (supplyItemId) {
+      await prisma.cleaningTaskSupplyUsage.upsert({
+        where: { task_id_supply_item_id: { task_id: id, supply_item_id: supplyItemId } },
+        update: { qty_used: qtyUsed },
+        create: { task_id: id, supply_item_id: supplyItemId, qty_used: qtyUsed },
+      });
+    }
+
+    return json(updated);
+  }
+
   // --- SUPPLY_TOGGLE: toggle a stay supply's checked state ---
   if (body.type === "SUPPLY_TOGGLE") {
     const { supplyId, checked } = body as {

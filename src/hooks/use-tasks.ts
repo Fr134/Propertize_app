@@ -36,6 +36,9 @@ interface StaySupplyData {
   id: string;
   text: string;
   checked: boolean;
+  supplyItemId?: string | null;
+  expectedQty?: number;
+  qtyUsed?: number;
 }
 
 interface ChecklistDataItem {
@@ -67,6 +70,15 @@ type ChecklistRaw =
   | { areas: ChecklistDataItem[]; staySupplies: StaySupplyData[] }
   | null;
 
+interface TaskSupplyUsage {
+  id: string;
+  task_id: string;
+  supply_item_id: string;
+  expected_qty: number;
+  qty_used: number;
+  supply_item: { name: string; unit: string };
+}
+
 interface TaskDetail extends TaskListItem {
   checklist_data: ChecklistRaw;
   reviewed_at: string | null;
@@ -76,6 +88,7 @@ interface TaskDetail extends TaskListItem {
   reopen_at: string | null;
   reviewer: { id: string; first_name: string; last_name: string } | null;
   photos: TaskPhoto[];
+  supply_usages?: TaskSupplyUsage[];
 }
 
 // --- Filters ---
@@ -145,7 +158,8 @@ export function useStartTask() {
 type ChecklistUpdatePayload =
   | { itemIndex: number; completed?: boolean; notes?: string }
   | { type: "AREA_SUBTASK_TOGGLE"; itemIndex: number; subTaskId: string; completed: boolean }
-  | { type: "SUPPLY_TOGGLE"; supplyId: string; checked: boolean };
+  | { type: "SUPPLY_TOGGLE"; supplyId: string; checked: boolean }
+  | { type: "SUPPLY_QTY_UPDATE"; supplyId: string; checked: boolean; qtyUsed: number };
 
 export function useUpdateChecklistItem(taskId: string) {
   const queryClient = useQueryClient();
@@ -245,4 +259,4 @@ export function parseChecklist(raw: ChecklistRaw): {
   };
 }
 
-export type { TaskListItem, TaskDetail, TaskPhoto, ChecklistDataItem, StaySupplyData, TaskFilters };
+export type { TaskListItem, TaskDetail, TaskPhoto, TaskSupplyUsage, ChecklistDataItem, StaySupplyData, TaskFilters };

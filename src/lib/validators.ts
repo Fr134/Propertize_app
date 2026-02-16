@@ -54,6 +54,8 @@ export const checklistTemplateItemSchema = z.object({
 export const staySupplyTemplateSchema = z.object({
   id: z.string().min(1),
   text: z.string().min(1, "Testo scorta obbligatorio"),
+  supplyItemId: z.string().uuid().optional().nullable(),
+  expectedQty: z.number().int().positive().optional().default(1),
 });
 
 export const updateChecklistTemplateSchema = z.object({
@@ -152,3 +154,64 @@ export const updateReportStatusSchema = z.object({
 });
 
 export type UpdateReportStatusInput = z.infer<typeof updateReportStatusSchema>;
+
+// --- Inventory: Supply Item ---
+
+export const createSupplyItemSchema = z.object({
+  name: z.string().min(1, "Nome articolo obbligatorio"),
+  sku: z.string().optional().or(z.literal("")),
+  unit: z.string().min(1).default("pz"),
+});
+
+export type CreateSupplyItemInput = z.infer<typeof createSupplyItemSchema>;
+
+export const updateSupplyItemSchema = z.object({
+  name: z.string().min(1).optional(),
+  sku: z.string().optional().or(z.literal("")),
+  unit: z.string().min(1).optional(),
+  is_active: z.boolean().optional(),
+});
+
+export type UpdateSupplyItemInput = z.infer<typeof updateSupplyItemSchema>;
+
+// --- Inventory: Stock Adjustment ---
+
+export const adjustStockSchema = z.object({
+  qty_on_hand: z.number().int().min(0, "Quantita' non puo' essere negativa"),
+  reorder_point: z.number().int().min(0).optional(),
+  notes: z.string().optional(),
+});
+
+export type AdjustStockInput = z.infer<typeof adjustStockSchema>;
+
+// --- Inventory: Task Supply Usage ---
+
+export const updateTaskSupplyUsageSchema = z.object({
+  supply_item_id: z.string().uuid(),
+  qty_used: z.number().int().min(0, "Quantita' deve essere >= 0"),
+});
+
+export type UpdateTaskSupplyUsageInput = z.infer<typeof updateTaskSupplyUsageSchema>;
+
+// --- Inventory: Purchase Order ---
+
+export const createPurchaseOrderSchema = z.object({
+  order_ref: z.string().optional().or(z.literal("")),
+  notes: z.string().optional().or(z.literal("")),
+  lines: z.array(z.object({
+    supply_item_id: z.string().uuid(),
+    qty_ordered: z.number().int().positive("Quantita' deve essere > 0"),
+    unit_cost: z.number().min(0).optional(),
+  })).min(1, "Almeno una riga richiesta"),
+});
+
+export type CreatePurchaseOrderInput = z.infer<typeof createPurchaseOrderSchema>;
+
+export const receivePurchaseOrderSchema = z.object({
+  lines: z.array(z.object({
+    supply_item_id: z.string().uuid(),
+    qty_received: z.number().int().min(0),
+  })).min(1),
+});
+
+export type ReceivePurchaseOrderInput = z.infer<typeof receivePurchaseOrderSchema>;
