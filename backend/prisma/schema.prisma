@@ -1,0 +1,390 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Enums
+// ============================================
+
+enum UserRole {
+  MANAGER
+  OPERATOR
+}
+
+enum PropertyType {
+  APPARTAMENTO
+  VILLA
+  ALTRO
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  APPROVED
+  REJECTED
+}
+
+enum SupplyCategory {
+  CAFFE
+  TE
+  ZUCCHERO
+  CARTA_IGIENICA
+  TOVAGLIOLI
+  SAPONE_MANI
+  SHAMPOO
+  BAGNOSCHIUMA
+  ALTRO
+}
+
+enum SupplyLevelEnum {
+  OK
+  IN_ESAURIMENTO
+  ESAURITO
+}
+
+enum LinenType {
+  LENZUOLA
+  ASCIUGAMANI
+  TOVAGLIE
+}
+
+enum LinenStatus {
+  SPORCA
+  IN_LAVAGGIO
+  PRONTA
+}
+
+enum ReportCategory {
+  DANNO
+  MANUTENZIONE
+  OGGETTO_MANCANTE
+}
+
+enum ReportPriority {
+  BASSA
+  MEDIA
+  ALTA
+}
+
+enum ReportStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum TransactionType {
+  PURCHASE_IN
+  CONSUMPTION_OUT
+  ADJUSTMENT
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+// ============================================
+// Models
+// ============================================
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  email         String   @unique
+  password_hash String
+  first_name    String
+  last_name     String
+  role          UserRole
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  assigned_tasks   CleaningTask[]      @relation("AssignedTasks")
+  reviewed_tasks   CleaningTask[]      @relation("ReviewedTasks")
+  reopened_tasks   CleaningTask[]      @relation("ReopenedTasks")
+  reports_created  MaintenanceReport[]
+  expenses_created Expense[]
+
+  @@map("users")
+}
+
+model Owner {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  email      String?
+  created_at DateTime @default(now())
+
+  properties Property[]
+
+  @@map("owners")
+}
+
+model Property {
+  id            String       @id @default(uuid()) @db.Uuid
+  name          String
+  code          String       @unique
+  address       String
+  property_type PropertyType
+  owner_id      String?      @db.Uuid
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+
+  owner              Owner?             @relation(fields: [owner_id], references: [id])
+  checklist_template ChecklistTemplate?
+  cleaning_tasks     CleaningTask[]
+  supply_levels      SupplyLevel[]
+  linen_inventory    LinenInventory[]
+  reports            MaintenanceReport[]
+  expenses           Expense[]
+
+  @@map("properties")
+}
+
+model ChecklistTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  property_id String   @unique @db.Uuid
+  items       Json
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@map("checklist_templates")
+}
+
+model CleaningTask {
+  id              String     @id @default(uuid()) @db.Uuid
+  property_id     String     @db.Uuid
+  assigned_to     String     @db.Uuid
+  scheduled_date  DateTime   @db.Date
+  status          TaskStatus @default(TODO)
+  checklist_data  Json?
+  notes           String?
+  completed_at    DateTime?
+  reviewed_at     DateTime?
+  reviewed_by     String?    @db.Uuid
+  rejection_notes String?
+  reopen_note     String?
+  reopen_at       DateTime?
+  reopen_by       String?    @db.Uuid
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
+
+  property      Property   @relation(fields: [property_id], references: [id])
+  operator      User       @relation("AssignedTasks", fields: [assigned_to], references: [id])
+  reviewer      User?      @relation("ReviewedTasks", fields: [reviewed_by], references: [id])
+  reopener      User?      @relation("ReopenedTasks", fields: [reopen_by], references: [id])
+  photos        TaskPhoto[]
+  reports       MaintenanceReport[]
+  supply_usages CleaningTaskSupplyUsage[]
+
+  @@map("cleaning_tasks")
+}
+
+model TaskPhoto {
+  id                   String   @id @default(uuid()) @db.Uuid
+  task_id              String   @db.Uuid
+  checklist_item_index Int
+  photo_url            String
+  uploaded_at          DateTime @default(now())
+
+  task CleaningTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@map("task_photos")
+}
+
+model SupplyLevel {
+  id          String          @id @default(uuid()) @db.Uuid
+  property_id String          @db.Uuid
+  task_id     String?         @db.Uuid
+  category    SupplyCategory
+  level       SupplyLevelEnum
+  updated_at  DateTime        @default(now()) @updatedAt
+
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@unique([property_id, category])
+  @@map("supply_levels")
+}
+
+model LinenInventory {
+  id          String      @id @default(uuid()) @db.Uuid
+  property_id String      @db.Uuid
+  type        LinenType
+  status      LinenStatus
+  quantity    Int
+  updated_at  DateTime    @default(now()) @updatedAt
+
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@unique([property_id, type, status])
+  @@map("linen_inventory")
+}
+
+model MaintenanceReport {
+  id          String         @id @default(uuid()) @db.Uuid
+  property_id String         @db.Uuid
+  task_id     String?        @db.Uuid
+  created_by  String         @db.Uuid
+  title       String
+  description String
+  category    ReportCategory
+  priority    ReportPriority
+  status      ReportStatus   @default(OPEN)
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+  resolved_at DateTime?
+
+  property Property      @relation(fields: [property_id], references: [id])
+  task     CleaningTask?  @relation(fields: [task_id], references: [id])
+  author   User           @relation(fields: [created_by], references: [id])
+  photos   ReportPhoto[]
+
+  @@map("maintenance_reports")
+}
+
+model ReportPhoto {
+  id          String   @id @default(uuid()) @db.Uuid
+  report_id   String   @db.Uuid
+  photo_url   String
+  uploaded_at DateTime @default(now())
+
+  report MaintenanceReport @relation(fields: [report_id], references: [id], onDelete: Cascade)
+
+  @@map("report_photos")
+}
+
+model Expense {
+  id           String   @id @default(uuid()) @db.Uuid
+  property_id  String   @db.Uuid
+  created_by   String   @db.Uuid
+  description  String
+  amount       Decimal  @db.Decimal(10, 2)
+  vat_amount   Decimal? @db.Decimal(10, 2)
+  expense_date DateTime @db.Date @default(now())
+  is_billed    Boolean  @default(false)
+  billed_at    DateTime?
+  is_paid      Boolean  @default(false)
+  paid_at      DateTime?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  property Property       @relation(fields: [property_id], references: [id])
+  author   User           @relation(fields: [created_by], references: [id])
+  photos   ExpensePhoto[]
+
+  @@map("expenses")
+}
+
+model ExpensePhoto {
+  id          String   @id @default(uuid()) @db.Uuid
+  expense_id  String   @db.Uuid
+  photo_url   String
+  uploaded_at DateTime @default(now())
+
+  expense Expense @relation(fields: [expense_id], references: [id], onDelete: Cascade)
+
+  @@map("expense_photos")
+}
+
+// ============================================
+// Inventory System
+// ============================================
+
+model SupplyItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  sku        String?  @unique
+  unit       String   @default("pz")
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  balance      InventoryBalance?
+  transactions InventoryTransaction[]
+  task_usages  CleaningTaskSupplyUsage[]
+  order_lines  PurchaseOrderLine[]
+
+  @@map("supply_items")
+}
+
+model InventoryBalance {
+  id             String   @id @default(uuid()) @db.Uuid
+  supply_item_id String   @unique @db.Uuid
+  qty_on_hand    Int      @default(0)
+  reorder_point  Int      @default(0)
+  updated_at     DateTime @updatedAt
+
+  supply_item SupplyItem @relation(fields: [supply_item_id], references: [id], onDelete: Cascade)
+
+  @@map("inventory_balances")
+}
+
+model InventoryTransaction {
+  id             String          @id @default(uuid()) @db.Uuid
+  supply_item_id String          @db.Uuid
+  type           TransactionType
+  qty            Int
+  reference_id   String?         @db.Uuid
+  notes          String?
+  created_by     String?         @db.Uuid
+  created_at     DateTime        @default(now())
+
+  supply_item SupplyItem @relation(fields: [supply_item_id], references: [id])
+
+  @@index([supply_item_id, created_at])
+  @@map("inventory_transactions")
+}
+
+model CleaningTaskSupplyUsage {
+  id             String   @id @default(uuid()) @db.Uuid
+  task_id        String   @db.Uuid
+  supply_item_id String   @db.Uuid
+  expected_qty   Int      @default(1)
+  qty_used       Int      @default(0)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  task        CleaningTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  supply_item SupplyItem   @relation(fields: [supply_item_id], references: [id])
+
+  @@unique([task_id, supply_item_id])
+  @@map("cleaning_task_supply_usages")
+}
+
+model PurchaseOrder {
+  id          String              @id @default(uuid()) @db.Uuid
+  order_ref   String?
+  status      PurchaseOrderStatus @default(DRAFT)
+  notes       String?
+  ordered_at  DateTime?
+  received_at DateTime?
+  created_by  String              @db.Uuid
+  created_at  DateTime            @default(now())
+  updated_at  DateTime            @updatedAt
+
+  lines PurchaseOrderLine[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id                String   @id @default(uuid()) @db.Uuid
+  purchase_order_id String   @db.Uuid
+  supply_item_id    String   @db.Uuid
+  qty_ordered       Int
+  qty_received      Int      @default(0)
+  unit_cost         Decimal? @db.Decimal(10, 2)
+
+  purchase_order PurchaseOrder @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
+  supply_item    SupplyItem    @relation(fields: [supply_item_id], references: [id])
+
+  @@unique([purchase_order_id, supply_item_id])
+  @@map("purchase_order_lines")
+}
