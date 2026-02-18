@@ -55,7 +55,18 @@ app.onError((err, c) => {
   return c.json({ error: "Internal server error" }, 500);
 });
 
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught exception:", err);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled rejection:", reason);
+  process.exit(1);
+});
+
 const port = parseInt(process.env.PORT || "3001", 10);
+console.log(`Starting server on port ${port}...`);
 serve({ fetch: app.fetch, port }, (info) => {
   console.log(`✅ Backend running on http://localhost:${info.port}`);
 });
