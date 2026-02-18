@@ -618,7 +618,7 @@ async function generatePDF(
   // Header
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("Report Spese Da Pagare", margin, 20);
+  doc.text("Report Spese", margin, 20);
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
@@ -660,7 +660,7 @@ async function generatePDF(
     // Owner header
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(180, 60, 0);
+    doc.setTextColor(30, 64, 175);
     doc.text(`Proprietario: ${ownerGroup.ownerName}`, margin, y);
     doc.setTextColor(0);
     y += 6;
@@ -696,8 +696,8 @@ async function generatePDF(
         foot: [["", "Subtotale", formatCurrency(subtotal), ""]],
         margin: { left: margin + 4, right: margin },
         styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [234, 88, 12], textColor: 255, fontStyle: "bold" },
-        footStyles: { fillColor: [255, 237, 213], textColor: [180, 60, 0], fontStyle: "bold" },
+        headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: "bold" },
+        footStyles: { fillColor: [219, 234, 254], textColor: [30, 64, 175], fontStyle: "bold" },
         columnStyles: {
           0: { cellWidth: "auto" },
           1: { cellWidth: 24, halign: "center" },
@@ -718,13 +718,13 @@ async function generatePDF(
   }
 
   // Grand total
-  doc.setDrawColor(234, 88, 12);
+  doc.setDrawColor(30, 64, 175);
   doc.setLineWidth(0.5);
   doc.line(margin, y, pageW - margin, y);
   y += 5;
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(180, 60, 0);
+  doc.setTextColor(30, 64, 175);
   doc.text("TOTALE DA PAGARE", margin, y);
   doc.text(formatCurrency(grandTotal), pageW - margin, y, { align: "right" });
   doc.setTextColor(0);
