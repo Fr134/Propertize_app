@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTasks, useDeleteTask } from "@/hooks/use-tasks";
+import { useProperties } from "@/hooks/use-properties";
 import { CreateTaskDialog } from "@/components/manager/create-task-dialog";
+import { TaskCalendar } from "@/components/manager/task-calendar";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClipboardList, Trash2 } from "lucide-react";
+import { ClipboardList, Trash2, List, CalendarDays } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("it-IT", {
@@ -28,18 +31,51 @@ function formatDate(dateStr: string) {
 
 export default function ManagerTasksPage() {
   const { data: tasks, isLoading } = useTasks();
+  const { data: properties } = useProperties();
   const deleteTask = useDeleteTask();
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [view, setView] = useState<"list" | "calendar">("list");
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Task</h1>
-        <CreateTaskDialog />
+        <div className="flex items-center gap-2">
+          {/* View toggle */}
+          <div className="flex rounded-md border overflow-hidden">
+            <button
+              onClick={() => setView("list")}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors",
+                view === "list"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background hover:bg-muted"
+              )}
+            >
+              <List className="h-3.5 w-3.5" />
+              Lista
+            </button>
+            <button
+              onClick={() => setView("calendar")}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors border-l",
+                view === "calendar"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background hover:bg-muted"
+              )}
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              Calendario
+            </button>
+          </div>
+          <CreateTaskDialog />
+        </div>
       </div>
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Caricamento...</p>
+      ) : view === "calendar" ? (
+        <TaskCalendar tasks={tasks ?? []} properties={properties ?? []} />
       ) : !tasks?.length ? (
         <div className="flex flex-col items-center justify-center rounded-md border border-dashed p-8 text-center">
           <ClipboardList className="mb-2 h-8 w-8 text-muted-foreground" />
