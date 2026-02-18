@@ -10,11 +10,8 @@
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "baseUrl": ".",
-    "paths": {
-      "@propertize/shared": ["../shared/src/index.ts"],
-      "@propertize/shared/*": ["../shared/src/*"]
-    }
+    "paths": {}
   },
-  "include": ["src/**/*", "../shared/src/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

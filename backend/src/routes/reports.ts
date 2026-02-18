@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
 import { getPaginationParams, createPaginatedResponse } from "../lib/pagination";
-import { createReportSchema, updateReportStatusSchema } from "@propertize/shared";
+import { createReportSchema, updateReportStatusSchema } from "../lib/validators";
 import type { AppEnv } from "../types";
 
 const router = new Hono<AppEnv>();

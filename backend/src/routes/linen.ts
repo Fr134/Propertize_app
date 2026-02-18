@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth } from "../middleware/auth";
-import { updateLinenSchema } from "@propertize/shared";
+import { updateLinenSchema } from "../lib/validators";
 import type { AppEnv } from "../types";
 
 const router = new Hono<AppEnv>();

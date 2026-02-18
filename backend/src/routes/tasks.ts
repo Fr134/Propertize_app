@@ -8,7 +8,7 @@ import {
   reviewTaskSchema,
   reopenTaskSchema,
   updateTaskSupplyUsageSchema,
-} from "@propertize/shared";
+} from "../lib/validators";
 import { postConsumptionTx } from "../lib/inventory";
 import type { AppEnv } from "../types";
 

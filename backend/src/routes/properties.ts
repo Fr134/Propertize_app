@@ -6,7 +6,7 @@ import {
   createPropertySchema,
   updateChecklistTemplateSchema,
   createExpenseSchema,
-} from "@propertize/shared";
+} from "../lib/validators";
 import type { AppEnv } from "../types";
 
 const router = new Hono<AppEnv>();

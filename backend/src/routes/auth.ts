@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { SignJWT } from "jose";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
-import { loginSchema } from "@propertize/shared";
+import { loginSchema } from "../lib/validators";
 import type { AppEnv } from "../types";
 
 const router = new Hono<AppEnv>();

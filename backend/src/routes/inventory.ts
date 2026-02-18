@@ -8,7 +8,7 @@ import {
   adjustStockSchema,
   createPurchaseOrderSchema,
   receivePurchaseOrderSchema,
-} from "@propertize/shared";
+} from "../lib/validators";
 import type { AppEnv } from "../types";
 
 const router = new Hono<AppEnv>();
