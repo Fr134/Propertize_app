@@ -166,6 +166,8 @@ router.post("/:id/expenses", auth, requireManager, async (c) => {
       expense_date: parsed.data.expense_date
         ? new Date(parsed.data.expense_date)
         : new Date(),
+      is_billed: true,
+      billed_at: new Date(),
     },
     include: {
       author: { select: { id: true, first_name: true, last_name: true } },

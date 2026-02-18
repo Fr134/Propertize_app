@@ -49,30 +49,7 @@ function ExpenseRow({ expense }: { expense: Expense }) {
   const updateExpense = useUpdateExpense();
   const { toast } = useToast();
 
-  async function toggleBilled() {
-    try {
-      await updateExpense.mutateAsync({
-        expenseId: expense.id,
-        data: { is_billed: !expense.is_billed },
-      });
-    } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "Errore",
-        description: err instanceof Error ? err.message : "Errore aggiornamento",
-      });
-    }
-  }
-
   async function togglePaid() {
-    if (!expense.is_billed) {
-      toast({
-        variant: "destructive",
-        title: "Non fatturata",
-        description: "Devi prima segnare la spesa come fatturata.",
-      });
-      return;
-    }
     try {
       await updateExpense.mutateAsync({
         expenseId: expense.id,
@@ -116,43 +93,17 @@ function ExpenseRow({ expense }: { expense: Expense }) {
         )}
       </div>
 
-      {/* Billed toggle */}
-      <button
-        type="button"
-        onClick={toggleBilled}
-        disabled={isPending}
-        className="flex items-center gap-1 rounded border px-2 py-1 text-xs transition-colors disabled:opacity-50"
-        style={{
-          backgroundColor: expense.is_billed ? "hsl(var(--primary) / 0.1)" : undefined,
-          borderColor: expense.is_billed ? "hsl(var(--primary))" : undefined,
-        }}
-        title={expense.is_billed ? "Segna come non fatturata" : "Segna come fatturata"}
-      >
-        {expense.is_billed ? (
-          <Check className="h-3 w-3 text-primary" />
-        ) : (
-          <X className="h-3 w-3 text-muted-foreground" />
-        )}
-        Fatturata
-      </button>
-
       {/* Paid toggle */}
       <button
         type="button"
         onClick={togglePaid}
-        disabled={isPending || !expense.is_billed}
+        disabled={isPending}
         className="flex items-center gap-1 rounded border px-2 py-1 text-xs transition-colors disabled:opacity-50"
         style={{
           backgroundColor: expense.is_paid ? "hsl(142 76% 36% / 0.1)" : undefined,
           borderColor: expense.is_paid ? "hsl(142 76% 36%)" : undefined,
         }}
-        title={
-          !expense.is_billed
-            ? "Prima segna come fatturata"
-            : expense.is_paid
-            ? "Segna come non pagata"
-            : "Segna come pagata"
-        }
+        title={expense.is_paid ? "Segna come non pagata" : "Segna come pagata"}
       >
         {expense.is_paid ? (
           <Check className="h-3 w-3 text-green-600" />
