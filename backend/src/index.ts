@@ -46,6 +46,9 @@ api.route("/expenses", expensesRoutes);
 
 app.route("/api", api);
 
+// Health check
+app.get("/health", (c) => c.json({ status: "ok", ts: new Date().toISOString() }));
+
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 app.onError((err, c) => {
   console.error(err);
