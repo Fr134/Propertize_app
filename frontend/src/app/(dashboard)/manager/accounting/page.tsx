@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   useAccountingProperties,
@@ -25,6 +25,7 @@ import {
   X,
   Plus,
   Users,
+  AlertCircle,
 } from "lucide-react";
 
 function formatCurrency(value: number | string) {
@@ -432,15 +433,171 @@ function OwnerSection({ owner }: { owner: AccountingOwner }) {
   );
 }
 
+// --- "Da pagare" tab: property section showing only unpaid expenses ---
+
+function DueOwnerPropertySection({
+  property,
+}: {
+  property: AccountingOwnerProperty;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const { data: allExpenses, isLoading } = useExpenses(
+    expanded ? property.id : ""
+  );
+  const unpaidExpenses = allExpenses?.filter((e) => !e.is_paid);
+
+  return (
+    <div className="rounded-md border border-orange-200">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-left px-3 py-2"
+      >
+        <div className="flex items-center gap-3">
+          {expanded ? (
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-xs">{property.name}</p>
+              <Badge variant="outline" className="text-xs">
+                {property.code}
+              </Badge>
+            </div>
+          </div>
+          <div className="text-right text-xs shrink-0">
+            <p className="text-muted-foreground">Da pagare</p>
+            <p className="font-semibold text-orange-700">
+              {formatCurrency(property.dueTotal)}
+            </p>
+          </div>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="border-t px-3 pb-3">
+          <div className="flex items-center justify-between py-2">
+            <p className="text-xs font-medium text-muted-foreground">
+              Spese non pagate
+            </p>
+            <Button variant="outline" size="sm" asChild>
+              <Link
+                href={`/manager/properties/${property.id}/accounting/new?from=overview`}
+              >
+                <Plus className="mr-1 h-3 w-3" />
+                Nuova spesa
+              </Link>
+            </Button>
+          </div>
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground py-2">
+              Caricamento...
+            </p>
+          ) : !unpaidExpenses || unpaidExpenses.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">
+              Nessuna spesa da pagare.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {unpaidExpenses.map((expense) => (
+                <ExpenseRow key={expense.id} expense={expense} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- "Da pagare" tab: owner section showing only properties with pending payments ---
+
+function DueOwnerSection({
+  owner,
+}: {
+  owner: AccountingOwner & { properties: AccountingOwnerProperty[] };
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <Card className="border-orange-200">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-left"
+      >
+        <CardContent className="flex items-center gap-4 py-4">
+          {expanded ? (
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          )}
+
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">{owner.name}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {owner.properties.length}{" "}
+              {owner.properties.length === 1
+                ? "immobile con importi in sospeso"
+                : "immobili con importi in sospeso"}
+            </p>
+          </div>
+
+          <div className="text-right text-xs shrink-0">
+            <p className="text-muted-foreground">Totale da pagare</p>
+            <p className="text-lg font-bold text-orange-700">
+              {formatCurrency(owner.dueTotal)}
+            </p>
+          </div>
+        </CardContent>
+      </button>
+
+      {expanded && (
+        <div className="border-t px-4 pb-4">
+          <p className="text-xs font-medium text-muted-foreground py-3">
+            Immobili con importi da saldare
+          </p>
+          {owner.properties.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">
+              Nessun immobile con spese da pagare.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {owner.properties.map((property) => (
+                <DueOwnerPropertySection key={property.id} property={property} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // --- Main page ---
 
+type View = "properties" | "owners" | "da_pagare";
+
 export default function AccountingOverviewPage() {
-  const [view, setView] = useState<"properties" | "owners">("properties");
+  const [view, setView] = useState<View>("properties");
   const { data: properties, isLoading: propertiesLoading } =
     useAccountingProperties();
   const { data: owners, isLoading: ownersLoading } = useAccountingOwners();
 
-  const isLoading = view === "properties" ? propertiesLoading : ownersLoading;
+  // Owners with at least one unpaid expense, properties filtered to dueTotal > 0
+  const dueOwners = useMemo(() => {
+    return (owners ?? [])
+      .map((o) => ({
+        ...o,
+        properties: o.properties.filter((p) => p.dueTotal > 0),
+      }))
+      .filter((o) => o.dueTotal > 0);
+  }, [owners]);
+
+  const isLoading =
+    view === "properties" ? propertiesLoading : ownersLoading;
 
   const totals =
     view === "properties"
@@ -453,7 +610,17 @@ export default function AccountingOverviewPage() {
           }),
           { totalExpenses: 0, billedTotal: 0, paidTotal: 0, dueTotal: 0 }
         )
-      : (owners ?? []).reduce(
+      : view === "owners"
+      ? (owners ?? []).reduce(
+          (acc, o) => ({
+            totalExpenses: acc.totalExpenses + o.totalExpenses,
+            billedTotal: acc.billedTotal + o.billedTotal,
+            paidTotal: acc.paidTotal + o.paidTotal,
+            dueTotal: acc.dueTotal + o.dueTotal,
+          }),
+          { totalExpenses: 0, billedTotal: 0, paidTotal: 0, dueTotal: 0 }
+        )
+      : dueOwners.reduce(
           (acc, o) => ({
             totalExpenses: acc.totalExpenses + o.totalExpenses,
             billedTotal: acc.billedTotal + o.billedTotal,
@@ -463,16 +630,19 @@ export default function AccountingOverviewPage() {
           { totalExpenses: 0, billedTotal: 0, paidTotal: 0, dueTotal: 0 }
         );
 
+  const subtitle =
+    view === "properties"
+      ? "Riepilogo spese per immobile"
+      : view === "owners"
+      ? "Riepilogo spese per proprietario"
+      : "Spese da addebitare non ancora pagate";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Contabilità</h1>
-          <p className="text-sm text-muted-foreground">
-            {view === "properties"
-              ? "Riepilogo spese per immobile"
-              : "Riepilogo spese per proprietario"}
-          </p>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>
 
         <div className="flex gap-1 rounded-lg border p-1">
@@ -492,52 +662,89 @@ export default function AccountingOverviewPage() {
             <Users className="mr-1.5 h-3.5 w-3.5" />
             Proprietari
           </Button>
+          <Button
+            variant={view === "da_pagare" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setView("da_pagare")}
+          >
+            <AlertCircle className="mr-1.5 h-3.5 w-3.5" />
+            Da pagare
+          </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Totale spese</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {formatCurrency(totals.totalExpenses)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Fatturato</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {formatCurrency(totals.billedTotal)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Pagato</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-green-700">
-              {formatCurrency(totals.paidTotal)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Da pagare</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-orange-700">
-              {formatCurrency(totals.dueTotal)}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* KPI cards — simplified for "Da pagare" view */}
+      {view === "da_pagare" ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Card className="border-orange-200 bg-orange-50/40">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-orange-800">
+                Totale da pagare
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-orange-700">
+                {formatCurrency(totals.dueTotal)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">
+                Proprietari con saldo in sospeso
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{dueOwners.length}</p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Totale spese</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">
+                {formatCurrency(totals.totalExpenses)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Fatturato</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">
+                {formatCurrency(totals.billedTotal)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Pagato</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-green-700">
+                {formatCurrency(totals.paidTotal)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Da pagare</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-orange-700">
+                {formatCurrency(totals.dueTotal)}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
+      {/* Content */}
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Caricamento...</p>
       ) : view === "properties" ? (
@@ -557,19 +764,36 @@ export default function AccountingOverviewPage() {
             ))}
           </div>
         )
-      ) : !owners || owners.length === 0 ? (
+      ) : view === "owners" ? (
+        !owners || owners.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <Users className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Nessun proprietario trovato.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {owners.map((owner) => (
+              <OwnerSection key={owner.id} owner={owner} />
+            ))}
+          </div>
+        )
+      ) : dueOwners.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center">
-            <Users className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+            <AlertCircle className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Nessun proprietario trovato.
+              Nessuna spesa da pagare. Tutto in regola!
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
-          {owners.map((owner) => (
-            <OwnerSection key={owner.id} owner={owner} />
+          {dueOwners.map((owner) => (
+            <DueOwnerSection key={owner.id} owner={owner} />
           ))}
         </div>
       )}
