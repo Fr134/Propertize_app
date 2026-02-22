@@ -136,36 +136,6 @@ export const createExternalContactSchema = z.object({
 export type CreateExternalContactInput = z.infer<typeof createExternalContactSchema>;
 
 // ============================================
-// Checklist Template (legacy V1 format — kept for backward compat)
-// ============================================
-
-export const subTaskTemplateSchema = z.object({
-  id: z.string().min(1),
-  text: z.string().min(1, "Testo sub-task obbligatorio"),
-});
-
-export const checklistTemplateItemSchema = z.object({
-  area: z.string().min(1, "Nome area obbligatorio"),
-  description: z.string().min(1, "Descrizione obbligatoria"),
-  photo_required: z.boolean(),
-  subTasks: z.array(subTaskTemplateSchema).optional().default([]),
-});
-
-export const staySupplyTemplateSchema = z.object({
-  id: z.string().min(1),
-  text: z.string().min(1, "Testo scorta obbligatorio"),
-  supplyItemId: z.string().uuid().optional().nullable(),
-  expectedQty: z.number().int().positive().optional().default(1),
-});
-
-export const updateChecklistTemplateSchema = z.object({
-  items: z.array(checklistTemplateItemSchema).min(1, "Almeno un item richiesto"),
-  staySupplies: z.array(staySupplyTemplateSchema).optional().default([]),
-});
-
-export type UpdateChecklistTemplateInput = z.infer<typeof updateChecklistTemplateSchema>;
-
-// ============================================
 // Task
 // ============================================
 

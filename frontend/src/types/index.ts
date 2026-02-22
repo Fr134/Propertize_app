@@ -124,55 +124,6 @@ export interface Owner {
   created_at: string;
 }
 
-// --- Stay supply types (legacy V1) ---
-
-export interface StaySupplyTemplate {
-  id: string;
-  text: string;
-  supplyItemId?: string | null;
-  expectedQty?: number;
-}
-
-export interface StaySupplyData {
-  id: string;
-  text: string;
-  checked: boolean;
-  supplyItemId?: string | null;
-  expectedQty?: number;
-  qtyUsed?: number;
-}
-
-// --- Sub-task types (legacy V1) ---
-
-export interface SubTaskTemplate {
-  id: string;
-  text: string;
-}
-
-export interface SubTaskData {
-  id: string;
-  text: string;
-  completed: boolean;
-}
-
-// --- Checklist Template Item (legacy V1) ---
-
-export interface ChecklistTemplateItem {
-  area: string;
-  description: string;
-  photo_required: boolean;
-  subTasks?: SubTaskTemplate[];
-}
-
-// --- Checklist Data Item (legacy V1) ---
-
-export interface ChecklistDataItem extends Omit<ChecklistTemplateItem, "subTasks"> {
-  completed: boolean;
-  photo_urls: string[];
-  notes?: string;
-  subTasks?: SubTaskData[];
-}
-
 // --- API Response Types ---
 
 export interface ApiResponse<T> {

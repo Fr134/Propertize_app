@@ -3,12 +3,11 @@
 import { use } from "react";
 import Link from "next/link";
 import { useProperty } from "@/hooks/use-properties";
-import { ChecklistEditor } from "@/components/manager/checklist-editor";
+import { useChecklistTemplate } from "@/hooks/use-checklist-template";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Receipt, FileText, ClipboardList } from "lucide-react";
-import type { ChecklistTemplateItem, StaySupplyTemplate } from "@/types";
 
 const propertyTypeLabels: Record<string, string> = {
   APPARTAMENTO: "Appartamento",
@@ -23,6 +22,7 @@ export default function PropertyDetailPage({
 }) {
   const { id } = use(params);
   const { data: property, isLoading } = useProperty(id);
+  const { data: templateData } = useChecklistTemplate(id);
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Caricamento...</p>;
@@ -32,14 +32,7 @@ export default function PropertyDetailPage({
     return <p className="text-sm text-destructive">Immobile non trovato.</p>;
   }
 
-  // Normalize: old format is array, new format is { items, staySupplies }
-  const rawTemplate = property.checklist_template?.items;
-  const checklistItems: ChecklistTemplateItem[] = Array.isArray(rawTemplate)
-    ? (rawTemplate as ChecklistTemplateItem[])
-    : ((rawTemplate as Record<string, unknown>)?.items as ChecklistTemplateItem[] ?? []);
-  const staySupplies: StaySupplyTemplate[] = Array.isArray(rawTemplate)
-    ? []
-    : ((rawTemplate as Record<string, unknown>)?.staySupplies as StaySupplyTemplate[] ?? []);
+  const areaCount = templateData?.items?.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -100,16 +93,10 @@ export default function PropertyDetailPage({
             <CardTitle className="text-sm font-medium">Aree checklist</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{checklistItems.length}</p>
+            <p className="text-2xl font-bold">{areaCount}</p>
           </CardContent>
         </Card>
       </div>
-
-      <ChecklistEditor
-        propertyId={id}
-        initialItems={checklistItems}
-        initialStaySupplies={staySupplies}
-      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { CreatePropertyInput, UpdateChecklistTemplateInput } from "@/lib/validators";
+import type { CreatePropertyInput } from "@/lib/validators";
 import { fetchJson, type PaginatedResponse } from "@/lib/fetch";
 
 export function useProperties() {
@@ -36,21 +36,6 @@ export function useCreateProperty() {
   });
 }
 
-export function useUpdateChecklist(propertyId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: UpdateChecklistTemplateInput) =>
-      fetchJson(`/api/properties/${propertyId}/checklist`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["properties", propertyId] });
-    },
-  });
-}
-
 // Types matching Prisma response
 interface PropertyListItem {
   id: string;
@@ -63,22 +48,13 @@ interface PropertyListItem {
   owner: { id: string; name: string } | null;
 }
 
-interface ChecklistTemplate {
-  id: string;
-  property_id: string;
-  // New format: { items: [...], staySupplies: [...] }
-  // Old format (backward compat): plain array
-  items: unknown;
-}
-
 interface PropertyDetail {
   id: string;
   name: string;
   code: string;
   address: string;
   property_type: string;
-  checklist_template: ChecklistTemplate | null;
   linen_inventory: { id: string; type: string; status: string; quantity: number }[];
 }
 
-export type { PropertyListItem, PropertyDetail, ChecklistTemplate };
+export type { PropertyListItem, PropertyDetail };

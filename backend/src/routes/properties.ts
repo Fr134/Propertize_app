@@ -4,7 +4,6 @@ import { auth, requireManager } from "../middleware/auth";
 import { getPaginationParams, createPaginatedResponse } from "../lib/pagination";
 import {
   createPropertySchema,
-  updateChecklistTemplateSchema,
   createExpenseSchema,
 } from "../lib/validators";
 import type { AppEnv } from "../types";
@@ -73,33 +72,6 @@ router.get("/:id", auth, async (c) => {
 
   if (!property) return c.json({ error: "Immobile non trovato" }, 404);
   return c.json(property);
-});
-
-// PUT /api/properties/:id/checklist
-router.put("/:id/checklist", auth, requireManager, async (c) => {
-  const id = c.req.param("id");
-
-  const property = await prisma.property.findUnique({ where: { id } });
-  if (!property) return c.json({ error: "Immobile non trovato" }, 404);
-
-  const body = await c.req.json();
-  const parsed = updateChecklistTemplateSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: parsed.error.issues[0].message }, 400);
-  }
-
-  const templateData = {
-    items: parsed.data.items,
-    staySupplies: parsed.data.staySupplies ?? [],
-  };
-
-  const template = await prisma.checklistTemplate.upsert({
-    where: { property_id: id },
-    update: { items: templateData },
-    create: { property_id: id, items: templateData },
-  });
-
-  return c.json(template);
 });
 
 // GET /api/properties/:id/supplies
