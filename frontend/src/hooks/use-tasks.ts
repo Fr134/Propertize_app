@@ -54,14 +54,17 @@ interface ChecklistDataItem {
 interface TaskListItem {
   id: string;
   property_id: string;
-  assigned_to: string;
+  assigned_to: string | null;
   scheduled_date: string;
   status: string;
   notes: string | null;
   completed_at: string | null;
   created_at: string;
+  task_type?: string;
+  title?: string | null;
+  assignee_type?: string;
   property: TaskProperty;
-  operator: TaskOperator;
+  operator: TaskOperator | null;
 }
 
 // checklist_data can be old array format or new object format

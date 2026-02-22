@@ -104,11 +104,15 @@ export default function ManagerTaskDetailPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <User className="h-4 w-4" /> Operatrice
+              <User className="h-4 w-4" /> Assegnato a
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm">{task.operator.first_name} {task.operator.last_name}</p>
+            <p className="text-sm">
+              {task.operator
+                ? `${task.operator.first_name} ${task.operator.last_name}`
+                : <span className="italic text-muted-foreground">Esterno</span>}
+            </p>
           </CardContent>
         </Card>
         <Card>

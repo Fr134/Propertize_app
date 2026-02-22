@@ -112,7 +112,9 @@ export default function ManagerTasksPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {task.operator.first_name} {task.operator.last_name}
+                    {task.operator
+                      ? `${task.operator.first_name} ${task.operator.last_name}`
+                      : <span className="text-muted-foreground italic">Esterno</span>}
                   </TableCell>
                   <TableCell>{formatDate(task.scheduled_date)}</TableCell>
                   <TableCell>

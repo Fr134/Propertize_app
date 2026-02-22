@@ -180,10 +180,11 @@ export function TaskCalendar({ tasks, properties }: TaskCalendarProps) {
                                   STATUS_COLORS[task.status] ??
                                     "bg-gray-100 text-gray-700 border-gray-200"
                                 )}
-                                title={`${task.operator.first_name} ${task.operator.last_name} – ${STATUS_LABELS[task.status] ?? task.status}`}
+                                title={`${task.operator ? `${task.operator.first_name} ${task.operator.last_name}` : (task.title ?? "Esterno")} – ${STATUS_LABELS[task.status] ?? task.status}`}
                               >
-                                {task.operator.first_name}{" "}
-                                {task.operator.last_name.charAt(0)}.
+                                {task.operator
+                                  ? `${task.operator.first_name} ${task.operator.last_name.charAt(0)}.`
+                                  : (task.title ?? "Esterno")}
                               </div>
                             </Link>
                           ))}
