@@ -4,7 +4,7 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { useTask, useStartTask, useCompleteTask, useUpdateChecklistItem, parseChecklist } from "@/hooks/use-tasks";
 import { ChecklistItemRow } from "@/components/operator/checklist-item-row";
-import { SupplyLevelSelector } from "@/components/operator/supply-level-selector";
+import { PropertySupplySelector } from "@/components/operator/property-supply-selector";
 import { LinenStatusUpdater } from "@/components/operator/linen-status-updater";
 import { CreateReportDialog } from "@/components/operator/create-report-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -215,7 +215,7 @@ export default function OperatorTaskDetailPage({
       {(isEditable || task.status === "COMPLETED" || task.status === "APPROVED") && (
         <>
           <Separator />
-          <SupplyLevelSelector
+          <PropertySupplySelector
             propertyId={task.property_id}
             taskId={id}
             disabled={!isEditable}

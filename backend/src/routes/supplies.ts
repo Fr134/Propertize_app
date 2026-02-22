@@ -16,18 +16,33 @@ router.patch("/", auth, async (c) => {
 
   const results = [];
   for (const supply of parsed.data.supplies) {
+    const key = {
+      property_id: parsed.data.property_id,
+      supply_item_id: supply.category,
+    };
+
+    // Read existing stock to derive meaningful qty from level
+    const existing = await prisma.propertySupplyStock.findUnique({
+      where: { property_id_supply_item_id: key },
+    });
+
+    const qtyStandard = existing?.qty_standard ?? 5;
+    const lowThreshold = existing?.low_threshold ?? 1;
+    const qtyCurrent =
+      supply.level === "OK"
+        ? qtyStandard
+        : supply.level === "IN_ESAURIMENTO"
+          ? lowThreshold
+          : 0;
+
     const result = await prisma.propertySupplyStock.upsert({
-      where: {
-        property_id_supply_item_id: {
-          property_id: parsed.data.property_id,
-          supply_item_id: supply.category,
-        },
-      },
-      update: { qty_current: supply.level === "OK" ? 1 : 0, updated_by_task: parsed.data.task_id },
+      where: { property_id_supply_item_id: key },
+      update: { qty_current: qtyCurrent, updated_by_task: parsed.data.task_id },
       create: {
-        property_id: parsed.data.property_id,
-        supply_item_id: supply.category,
-        qty_current: supply.level === "OK" ? 1 : 0,
+        ...key,
+        qty_current: qtyCurrent,
+        qty_standard: qtyStandard,
+        low_threshold: lowThreshold,
         updated_by_task: parsed.data.task_id,
       },
     });

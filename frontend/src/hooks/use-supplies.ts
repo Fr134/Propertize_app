@@ -2,22 +2,44 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/fetch";
 import type { UpdateSupplyInput } from "@/lib/validators";
 
-interface SupplyLevelItem {
+// Matches GET /api/properties/:id/supplies response (PropertySupplyStock + supply_item)
+interface PropertySupplyStockItem {
   id: string;
   property_id: string;
-  category: string;
-  level: string;
-  task_id: string | null;
+  supply_item_id: string;
+  qty_current: number;
+  qty_standard: number;
+  low_threshold: number;
+  updated_at: string;
+  updated_by_task: string | null;
+  supply_item: {
+    name: string;
+    unit: string;
+  };
 }
 
-interface LowSupplyItem extends SupplyLevelItem {
-  property: { id: string; name: string; code: string };
+// Matches GET /api/supplies/low response
+interface LowSupplyStockItem {
+  id: string;
+  property_id: string;
+  supply_item_id: string;
+  qty_current: number;
+  low_threshold: number;
+  property_name: string;
+  property_code: string;
+}
+
+/** Derive display level from qty_current vs thresholds */
+export function deriveLevel(item: Pick<PropertySupplyStockItem, "qty_current" | "low_threshold">): "OK" | "IN_ESAURIMENTO" | "ESAURITO" {
+  if (item.qty_current <= 0) return "ESAURITO";
+  if (item.qty_current <= item.low_threshold) return "IN_ESAURIMENTO";
+  return "OK";
 }
 
 export function usePropertySupplies(propertyId: string) {
   return useQuery({
     queryKey: ["supplies", propertyId],
-    queryFn: () => fetchJson<SupplyLevelItem[]>(`/api/properties/${propertyId}/supplies`),
+    queryFn: () => fetchJson<PropertySupplyStockItem[]>(`/api/properties/${propertyId}/supplies`),
     enabled: !!propertyId,
   });
 }
@@ -25,7 +47,7 @@ export function usePropertySupplies(propertyId: string) {
 export function useLowSupplies() {
   return useQuery({
     queryKey: ["supplies", "low"],
-    queryFn: () => fetchJson<LowSupplyItem[]>("/api/supplies/low"),
+    queryFn: () => fetchJson<LowSupplyStockItem[]>("/api/supplies/low"),
   });
 }
 
@@ -44,4 +66,4 @@ export function useUpdateSupplies() {
   });
 }
 
-export type { SupplyLevelItem, LowSupplyItem };
+export type { PropertySupplyStockItem, LowSupplyStockItem };
