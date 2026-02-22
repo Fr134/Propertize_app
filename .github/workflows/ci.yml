@@ -25,6 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Railway
-        run: npx @railway/cli deploy --service ${{ secrets.RAILWAY_SERVICE_ID }}
+        run: npx @railway/cli up --project ${{ secrets.RAILWAY_PROJECT_ID }}
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
