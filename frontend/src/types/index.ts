@@ -1,6 +1,9 @@
 // ============================================
-// Propertize Housekeeping App - Type Definitions
+// Propertize App - Type Definitions
 // ============================================
+
+// Re-export JSON field types (derived from Zod schemas)
+export * from "./schema";
 
 // --- Enums ---
 
@@ -21,24 +24,47 @@ export enum TaskStatus {
   COMPLETED = "COMPLETED",
   APPROVED = "APPROVED",
   REJECTED = "REJECTED",
+  DONE = "DONE",
 }
 
-export enum SupplyCategory {
-  CAFFE = "CAFFE",
-  TE = "TE",
-  ZUCCHERO = "ZUCCHERO",
-  CARTA_IGIENICA = "CARTA_IGIENICA",
-  TOVAGLIOLI = "TOVAGLIOLI",
-  SAPONE_MANI = "SAPONE_MANI",
-  SHAMPOO = "SHAMPOO",
-  BAGNOSCHIUMA = "BAGNOSCHIUMA",
-  ALTRO = "ALTRO",
+export enum TaskType {
+  CLEANING = "CLEANING",
+  PREPARATION = "PREPARATION",
+  MAINTENANCE = "MAINTENANCE",
+  INSPECTION = "INSPECTION",
+  KEY_HANDOVER = "KEY_HANDOVER",
+  OTHER = "OTHER",
 }
 
-export enum SupplyLevel {
-  OK = "OK",
-  IN_ESAURIMENTO = "IN_ESAURIMENTO",
-  ESAURITO = "ESAURITO",
+export enum AssigneeType {
+  INTERNAL = "INTERNAL",
+  EXTERNAL = "EXTERNAL",
+}
+
+export enum ExternalContactCategory {
+  PLUMBER = "PLUMBER",
+  ELECTRICIAN = "ELECTRICIAN",
+  CLEANER = "CLEANER",
+  HANDYMAN = "HANDYMAN",
+  INSPECTOR = "INSPECTOR",
+  OTHER = "OTHER",
+}
+
+export enum ItemCondition {
+  GOOD = "GOOD",
+  DAMAGED = "DAMAGED",
+  BROKEN = "BROKEN",
+  REPLACED = "REPLACED",
+}
+
+export enum ExpenseCategory {
+  MAINTENANCE = "MAINTENANCE",
+  CLEANING = "CLEANING",
+  UTILITIES = "UTILITIES",
+  SUPPLIES = "SUPPLIES",
+  INSURANCE = "INSURANCE",
+  TAX = "TAX",
+  OTHER = "OTHER",
 }
 
 export enum LinenType {
@@ -71,16 +97,34 @@ export enum ReportStatus {
   RESOLVED = "RESOLVED",
 }
 
+export enum TransactionType {
+  PURCHASE_IN = "PURCHASE_IN",
+  CONSUMPTION_OUT = "CONSUMPTION_OUT",
+  ADJUSTMENT = "ADJUSTMENT",
+}
+
+export enum PurchaseOrderStatus {
+  DRAFT = "DRAFT",
+  ORDERED = "ORDERED",
+  RECEIVED = "RECEIVED",
+  CANCELLED = "CANCELLED",
+}
+
 // --- Owner ---
 
 export interface Owner {
   id: string;
   name: string;
   email: string | null;
+  phone: string | null;
+  address: string | null;
+  fiscal_code: string | null;
+  iban: string | null;
+  notes: string | null;
   created_at: string;
 }
 
-// --- Stay supply types ---
+// --- Stay supply types (legacy V1) ---
 
 export interface StaySupplyTemplate {
   id: string;
@@ -98,7 +142,7 @@ export interface StaySupplyData {
   qtyUsed?: number;
 }
 
-// --- Sub-task types ---
+// --- Sub-task types (legacy V1) ---
 
 export interface SubTaskTemplate {
   id: string;
@@ -111,7 +155,7 @@ export interface SubTaskData {
   completed: boolean;
 }
 
-// --- Checklist Template Item ---
+// --- Checklist Template Item (legacy V1) ---
 
 export interface ChecklistTemplateItem {
   area: string;
@@ -120,7 +164,7 @@ export interface ChecklistTemplateItem {
   subTasks?: SubTaskTemplate[];
 }
 
-// --- Checklist Data (compiled during task) ---
+// --- Checklist Data Item (legacy V1) ---
 
 export interface ChecklistDataItem extends Omit<ChecklistTemplateItem, "subTasks"> {
   completed: boolean;
@@ -144,19 +188,6 @@ export interface PaginatedResponse<T> {
 }
 
 // --- Inventory ---
-
-export enum TransactionType {
-  PURCHASE_IN = "PURCHASE_IN",
-  CONSUMPTION_OUT = "CONSUMPTION_OUT",
-  ADJUSTMENT = "ADJUSTMENT",
-}
-
-export enum PurchaseOrderStatus {
-  DRAFT = "DRAFT",
-  ORDERED = "ORDERED",
-  RECEIVED = "RECEIVED",
-  CANCELLED = "CANCELLED",
-}
 
 export interface SupplyItem {
   id: string;

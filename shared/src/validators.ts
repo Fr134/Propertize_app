@@ -1,6 +1,68 @@
 import { z } from "zod";
 
-// --- Auth ---
+// ============================================
+// JSON Field Schemas
+// ============================================
+
+// --- ChecklistTemplate items field ---
+
+export const subTaskSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  completed: z.boolean(),
+});
+
+export const checklistSupplyItemSchema = z.object({
+  supply_item_id: z.string(),
+  label: z.string(),
+  expected_qty: z.number().int().positive(),
+});
+
+export const checklistAreaSchema = z.object({
+  id: z.string(),
+  area: z.string(),
+  description: z.string(),
+  photo_required: z.boolean(),
+  sub_tasks: z.array(subTaskSchema),
+  supply_items: z.array(checklistSupplyItemSchema),
+});
+
+export const checklistTemplateSchema = z.array(checklistAreaSchema);
+
+// --- Task checklist_data field (operator-filled) ---
+
+export const checklistAreaDataSchema = checklistAreaSchema.extend({
+  completed: z.boolean(),
+  photo_urls: z.array(z.string()),
+  notes: z.string().nullable(),
+  sub_tasks: z.array(subTaskSchema.extend({ completed: z.boolean() })),
+  supply_items: z.array(
+    checklistSupplyItemSchema.extend({ qty_used: z.number().int().min(0) })
+  ),
+});
+
+export const checklistDataSchema = z.array(checklistAreaDataSchema);
+
+// --- PropertyMasterFile custom_fields ---
+
+export const customFieldSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  value: z.string(),
+});
+
+export const customFieldsSchema = z.array(customFieldSchema);
+
+// --- PropertyMasterFile additional_photos ---
+
+export const masterFilePhotoSchema = z.object({
+  url: z.string(),
+  caption: z.string().nullable(),
+});
+
+// ============================================
+// Auth
+// ============================================
 
 export const loginSchema = z.object({
   email: z.string().email("Email non valida"),
@@ -9,7 +71,9 @@ export const loginSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
-// --- Property ---
+// ============================================
+// Property
+// ============================================
 
 export const createPropertySchema = z.object({
   name: z.string().min(1, "Nome obbligatorio"),
@@ -17,15 +81,27 @@ export const createPropertySchema = z.object({
   address: z.string().min(1, "Indirizzo obbligatorio"),
   property_type: z.enum(["APPARTAMENTO", "VILLA", "ALTRO"]),
   owner_id: z.string().uuid("ID proprietario non valido").optional().or(z.literal("")),
+  bedroom_count: z.number().int().min(0).optional(),
+  bathroom_count: z.number().int().min(0).optional(),
+  max_guests: z.number().int().min(0).optional(),
+  floor_area_sqm: z.number().min(0).optional(),
+  active: z.boolean().optional(),
 });
 
 export type CreatePropertyInput = z.infer<typeof createPropertySchema>;
 
-// --- Owner ---
+// ============================================
+// Owner
+// ============================================
 
 export const createOwnerSchema = z.object({
   name: z.string().min(1, "Nome proprietario obbligatorio"),
   email: z.string().email("Email non valida").optional().or(z.literal("")),
+  phone: z.string().optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
+  fiscal_code: z.string().optional().or(z.literal("")),
+  iban: z.string().optional().or(z.literal("")),
+  notes: z.string().optional().or(z.literal("")),
 });
 
 export type CreateOwnerInput = z.infer<typeof createOwnerSchema>;
@@ -33,11 +109,35 @@ export type CreateOwnerInput = z.infer<typeof createOwnerSchema>;
 export const updateOwnerSchema = z.object({
   name: z.string().min(1, "Nome proprietario obbligatorio").optional(),
   email: z.string().email("Email non valida").optional().or(z.literal("")),
+  phone: z.string().optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
+  fiscal_code: z.string().optional().or(z.literal("")),
+  iban: z.string().optional().or(z.literal("")),
+  notes: z.string().optional().or(z.literal("")),
 });
 
 export type UpdateOwnerInput = z.infer<typeof updateOwnerSchema>;
 
-// --- Checklist Template ---
+// ============================================
+// External Contact
+// ============================================
+
+export const createExternalContactSchema = z.object({
+  name: z.string().min(1, "Nome contatto obbligatorio"),
+  phone: z.string().optional().or(z.literal("")),
+  email: z.string().email("Email non valida").optional().or(z.literal("")),
+  company: z.string().optional().or(z.literal("")),
+  category: z.enum([
+    "PLUMBER", "ELECTRICIAN", "CLEANER", "HANDYMAN", "INSPECTOR", "OTHER",
+  ]),
+  notes: z.string().optional().or(z.literal("")),
+});
+
+export type CreateExternalContactInput = z.infer<typeof createExternalContactSchema>;
+
+// ============================================
+// Checklist Template (legacy V1 format — kept for backward compat)
+// ============================================
 
 export const subTaskTemplateSchema = z.object({
   id: z.string().min(1),
@@ -65,14 +165,31 @@ export const updateChecklistTemplateSchema = z.object({
 
 export type UpdateChecklistTemplateInput = z.infer<typeof updateChecklistTemplateSchema>;
 
-// --- Cleaning Task ---
+// ============================================
+// Task
+// ============================================
 
 export const createTaskSchema = z.object({
   property_id: z.string().uuid("ID immobile non valido"),
-  assigned_to: z.string().uuid("ID operatrice non valido"),
+  task_type: z.enum([
+    "CLEANING", "PREPARATION", "MAINTENANCE", "INSPECTION", "KEY_HANDOVER", "OTHER",
+  ]).default("CLEANING"),
+  title: z.string().optional(),
   scheduled_date: z.string().min(1, "Data obbligatoria"),
+  start_time: z.string().optional(),
+  end_time: z.string().optional(),
+  assigned_to: z.string().uuid("ID operatrice non valido").optional(),
+  external_assignee_id: z.string().uuid("ID contatto esterno non valido").optional(),
+  assignee_type: z.enum(["INTERNAL", "EXTERNAL"]).default("INTERNAL"),
+  can_use_supplies: z.boolean().default(true),
   notes: z.string().optional(),
-});
+}).refine(
+  (data) => data.task_type !== "CLEANING" || !!data.assigned_to,
+  { message: "Operatrice obbligatoria per task di pulizia", path: ["assigned_to"] }
+).refine(
+  (data) => data.assignee_type !== "EXTERNAL" || !!data.external_assignee_id,
+  { message: "Contatto esterno obbligatorio per incarichi esterni", path: ["external_assignee_id"] }
+);
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
@@ -89,17 +206,16 @@ export const reopenTaskSchema = z.object({
 
 export type ReopenTaskInput = z.infer<typeof reopenTaskSchema>;
 
-// --- Supply ---
+// ============================================
+// Supply (property-level stock update)
+// ============================================
 
 export const updateSupplySchema = z.object({
   property_id: z.string().uuid(),
   task_id: z.string().uuid().optional(),
   supplies: z.array(
     z.object({
-      category: z.enum([
-        "CAFFE", "TE", "ZUCCHERO", "CARTA_IGIENICA",
-        "TOVAGLIOLI", "SAPONE_MANI", "SHAMPOO", "BAGNOSCHIUMA", "ALTRO",
-      ]),
+      category: z.string().uuid(),
       level: z.enum(["OK", "IN_ESAURIMENTO", "ESAURITO"]),
     })
   ),
@@ -107,7 +223,9 @@ export const updateSupplySchema = z.object({
 
 export type UpdateSupplyInput = z.infer<typeof updateSupplySchema>;
 
-// --- Linen ---
+// ============================================
+// Linen
+// ============================================
 
 export const updateLinenSchema = z.object({
   property_id: z.string().uuid(),
@@ -122,7 +240,9 @@ export const updateLinenSchema = z.object({
 
 export type UpdateLinenInput = z.infer<typeof updateLinenSchema>;
 
-// --- Expense ---
+// ============================================
+// Expense
+// ============================================
 
 export const createExpenseSchema = z.object({
   description: z.string().min(1, "Descrizione obbligatoria"),
@@ -136,7 +256,9 @@ export const createExpenseSchema = z.object({
 
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 
-// --- Maintenance Report ---
+// ============================================
+// Maintenance Report
+// ============================================
 
 export const createReportSchema = z.object({
   property_id: z.string().uuid("ID immobile non valido"),
@@ -155,7 +277,9 @@ export const updateReportStatusSchema = z.object({
 
 export type UpdateReportStatusInput = z.infer<typeof updateReportStatusSchema>;
 
-// --- Inventory: Supply Item ---
+// ============================================
+// Inventory: Supply Item
+// ============================================
 
 export const createSupplyItemSchema = z.object({
   name: z.string().min(1, "Nome articolo obbligatorio"),
@@ -174,7 +298,9 @@ export const updateSupplyItemSchema = z.object({
 
 export type UpdateSupplyItemInput = z.infer<typeof updateSupplyItemSchema>;
 
-// --- Inventory: Stock Adjustment ---
+// ============================================
+// Inventory: Stock Adjustment
+// ============================================
 
 export const adjustStockSchema = z.object({
   qty_on_hand: z.number().int().min(0, "Quantita' non puo' essere negativa"),
@@ -184,7 +310,9 @@ export const adjustStockSchema = z.object({
 
 export type AdjustStockInput = z.infer<typeof adjustStockSchema>;
 
-// --- Inventory: Task Supply Usage ---
+// ============================================
+// Inventory: Task Supply Usage
+// ============================================
 
 export const updateTaskSupplyUsageSchema = z.object({
   supply_item_id: z.string().uuid(),
@@ -193,7 +321,9 @@ export const updateTaskSupplyUsageSchema = z.object({
 
 export type UpdateTaskSupplyUsageInput = z.infer<typeof updateTaskSupplyUsageSchema>;
 
-// --- Inventory: Purchase Order ---
+// ============================================
+// Inventory: Purchase Order
+// ============================================
 
 export const createPurchaseOrderSchema = z.object({
   order_ref: z.string().optional().or(z.literal("")),
