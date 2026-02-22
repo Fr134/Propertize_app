@@ -7,7 +7,7 @@ import { ChecklistEditor } from "@/components/manager/checklist-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, MapPin, Receipt, FileText } from "lucide-react";
+import { ArrowLeft, MapPin, Receipt, FileText, ClipboardList } from "lucide-react";
 import type { ChecklistTemplateItem, StaySupplyTemplate } from "@/types";
 
 const propertyTypeLabels: Record<string, string> = {
@@ -57,6 +57,12 @@ export default function PropertyDetailPage({
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/manager/properties/${id}/checklist`}>
+              <ClipboardList className="mr-2 h-4 w-4" />
+              Checklist
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link href={`/manager/properties/${id}/masterfile`}>
               <FileText className="mr-2 h-4 w-4" />
