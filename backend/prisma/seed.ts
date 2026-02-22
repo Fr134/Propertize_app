@@ -116,16 +116,7 @@ async function main() {
     { room: "Soggiorno", name: "TV 55 pollici", brand: "LG", model: "55UP7500", serial_number: "SN-004" },
   ];
 
-  for (const item of inventoryItems) {
-    await prisma.propertyInventoryItem.create({
-      data: {
-        property_id: property1.id,
-        ...item,
-        condition: "GOOD",
-      },
-    });
-  }
-  console.log("✅ Inventory items:", inventoryItems.length);
+  console.log("✅ Inventory items definiti:", inventoryItems.length);
 
   // --- SupplyItems + PropertySupplyStock ---
   const supplyItem1 = await prisma.supplyItem.upsert({
@@ -211,7 +202,17 @@ async function main() {
   });
   console.log("✅ DothouseBooking:", booking.external_id);
 
-  // --- Tasks ---
+  // --- Tasks (clean up previous seed runs) ---
+  await prisma.task.deleteMany({ where: { property_id: property1.id } });
+  await prisma.propertyInventoryItem.deleteMany({ where: { property_id: property1.id } });
+
+  // Re-create inventory items after cleanup
+  for (const item of inventoryItems) {
+    await prisma.propertyInventoryItem.create({
+      data: { property_id: property1.id, ...item, condition: "GOOD" },
+    });
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
