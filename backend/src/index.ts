@@ -15,6 +15,7 @@ import accountingRoutes from "./routes/accounting";
 import dashboardRoutes from "./routes/dashboard";
 import inventoryRoutes from "./routes/inventory";
 import expensesRoutes from "./routes/expenses";
+import masterfileRoutes from "./routes/masterfile";
 
 const app = new Hono<AppEnv>();
 
@@ -43,6 +44,7 @@ api.route("/accounting", accountingRoutes);
 api.route("/dashboard", dashboardRoutes);
 api.route("/inventory", inventoryRoutes);
 api.route("/expenses", expensesRoutes);
+api.route("/masterfile", masterfileRoutes);
 
 app.route("/api", api);
 

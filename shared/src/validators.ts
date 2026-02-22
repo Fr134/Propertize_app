@@ -345,3 +345,64 @@ export const receivePurchaseOrderSchema = z.object({
 });
 
 export type ReceivePurchaseOrderInput = z.infer<typeof receivePurchaseOrderSchema>;
+
+// ============================================
+// Property Masterfile
+// ============================================
+
+export const masterfileSchema = z.object({
+  plumber_name: z.string().optional().or(z.literal("")),
+  plumber_phone: z.string().optional().or(z.literal("")),
+  electrician_name: z.string().optional().or(z.literal("")),
+  electrician_phone: z.string().optional().or(z.literal("")),
+  cleaner_notes: z.string().optional().or(z.literal("")),
+  cadastral_id: z.string().optional().or(z.literal("")),
+  cie_code: z.string().optional().or(z.literal("")),
+  tourism_license: z.string().optional().or(z.literal("")),
+  custom_fields: customFieldsSchema.optional(),
+  cover_photo_url: z.string().url().optional().or(z.literal("")),
+  floorplan_url: z.string().url().optional().or(z.literal("")),
+  additional_photos: z.array(masterFilePhotoSchema).optional(),
+  drive_folder_url: z.string().url().optional().or(z.literal("")),
+});
+
+export type MasterfileInput = z.infer<typeof masterfileSchema>;
+
+export const updatePropertyOperationalSchema = z.object({
+  wifi_network: z.string().optional().or(z.literal("")),
+  wifi_password: z.string().optional().or(z.literal("")),
+  door_code: z.string().optional().or(z.literal("")),
+  alarm_code: z.string().optional().or(z.literal("")),
+  gas_meter_location: z.string().optional().or(z.literal("")),
+  water_shutoff: z.string().optional().or(z.literal("")),
+  electricity_panel: z.string().optional().or(z.literal("")),
+  trash_schedule: z.string().optional().or(z.literal("")),
+  checkin_notes: z.string().optional().or(z.literal("")),
+  checkout_notes: z.string().optional().or(z.literal("")),
+  internal_notes: z.string().optional().or(z.literal("")),
+});
+
+export type UpdatePropertyOperationalInput = z.infer<typeof updatePropertyOperationalSchema>;
+
+// ============================================
+// Property Inventory Item
+// ============================================
+
+export const createInventoryItemSchema = z.object({
+  room: z.string().min(1, "Stanza obbligatoria"),
+  name: z.string().min(1, "Nome oggetto obbligatorio"),
+  brand: z.string().optional().or(z.literal("")),
+  model: z.string().optional().or(z.literal("")),
+  serial_number: z.string().optional().or(z.literal("")),
+  purchase_date: z.string().optional().or(z.literal("")),
+  warranty_expires: z.string().optional().or(z.literal("")),
+  notes: z.string().optional().or(z.literal("")),
+  photo_url: z.string().optional().or(z.literal("")),
+  condition: z.enum(["GOOD", "DAMAGED", "BROKEN", "REPLACED"]).default("GOOD"),
+});
+
+export type CreateInventoryItemInput = z.infer<typeof createInventoryItemSchema>;
+
+export const updateInventoryItemSchema = createInventoryItemSchema.partial();
+
+export type UpdateInventoryItemInput = z.infer<typeof updateInventoryItemSchema>;
