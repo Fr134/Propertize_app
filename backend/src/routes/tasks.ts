@@ -5,6 +5,7 @@ import { auth, requireManager } from "../middleware/auth";
 import { getPaginationParams, createPaginatedResponse } from "../lib/pagination";
 import {
   createTaskSchema,
+  rescheduleTaskSchema,
   reviewTaskSchema,
   reopenTaskSchema,
   updateTaskSupplyUsageSchema,
@@ -24,6 +25,10 @@ router.get("/", auth, async (c) => {
   const status = c.req.query("status");
   const date = c.req.query("date");
   const taskType = c.req.query("task_type");
+  const dateFrom = c.req.query("date_from");
+  const dateTo = c.req.query("date_to");
+  const isScheduled = c.req.query("is_scheduled");
+  const propertyId = c.req.query("property_id");
 
   const where: Record<string, unknown> = {};
   if (role === "OPERATOR") {
@@ -32,8 +37,18 @@ router.get("/", auth, async (c) => {
     where.assigned_to = assignedTo;
   }
   if (status) where.status = status;
-  if (date) where.scheduled_date = new Date(date);
+  if (date) {
+    where.scheduled_date = new Date(date);
+  } else if (dateFrom || dateTo) {
+    const dateRange: Record<string, Date> = {};
+    if (dateFrom) dateRange.gte = new Date(dateFrom);
+    if (dateTo) dateRange.lte = new Date(dateTo);
+    where.scheduled_date = dateRange;
+  }
   if (taskType) where.task_type = taskType;
+  if (propertyId) where.property_id = propertyId;
+  if (isScheduled === "true") where.is_scheduled = true;
+  if (isScheduled === "false") where.is_scheduled = false;
 
   const [tasks, total] = await Promise.all([
     prisma.task.findMany({
@@ -366,6 +381,34 @@ router.patch("/:id/done", auth, requireManager, async (c) => {
   const updated = await prisma.task.update({
     where: { id },
     data: { status: "DONE", completed_at: new Date() },
+    include: {
+      property: { select: { id: true, name: true, code: true } },
+      operator: { select: { id: true, first_name: true, last_name: true } },
+      external_assignee: { select: { id: true, name: true, company: true, phone: true } },
+    },
+  });
+
+  return c.json(updated);
+});
+
+// PATCH /api/tasks/:id/reschedule
+router.patch("/:id/reschedule", auth, requireManager, async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json();
+  const parsed = rescheduleTaskSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.issues[0].message }, 400);
+  }
+
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task) return c.json({ error: "Task non trovato" }, 404);
+
+  const updated = await prisma.task.update({
+    where: { id },
+    data: {
+      scheduled_date: new Date(parsed.data.scheduled_date),
+      is_scheduled: true,
+    },
     include: {
       property: { select: { id: true, name: true, code: true } },
       operator: { select: { id: true, first_name: true, last_name: true } },

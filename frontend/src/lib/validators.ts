@@ -193,6 +193,12 @@ export const createTaskSchema = z.object({
 
 export type CreateTaskInput = z.input<typeof createTaskSchema>;
 
+export const rescheduleTaskSchema = z.object({
+  scheduled_date: z.string().min(1, "Data obbligatoria"),
+});
+
+export type RescheduleTaskInput = z.infer<typeof rescheduleTaskSchema>;
+
 export const reviewTaskSchema = z.object({
   status: z.enum(["APPROVED", "REJECTED"]),
   notes: z.string().optional(),

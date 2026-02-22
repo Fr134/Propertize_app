@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson, type PaginatedResponse } from "@/lib/fetch";
-import type { CreateTaskInput, ReviewTaskInput, ReopenTaskInput } from "@/lib/validators";
+import type { CreateTaskInput, ReviewTaskInput, ReopenTaskInput, RescheduleTaskInput } from "@/lib/validators";
 
 // --- Types ---
 
@@ -73,6 +73,7 @@ interface TaskListItem {
   start_time: string | null;
   end_time: string | null;
   can_use_supplies: boolean;
+  is_scheduled: boolean;
   property: TaskProperty;
   operator: TaskOperator | null;
   external_assignee: ExternalAssignee | null;
@@ -117,6 +118,10 @@ interface TaskFilters {
   status?: string;
   date?: string;
   task_type?: string;
+  date_from?: string;
+  date_to?: string;
+  property_id?: string;
+  is_scheduled?: boolean;
 }
 
 function buildQueryString(filters: TaskFilters): string {
@@ -125,6 +130,10 @@ function buildQueryString(filters: TaskFilters): string {
   if (filters.status) params.set("status", filters.status);
   if (filters.date) params.set("date", filters.date);
   if (filters.task_type) params.set("task_type", filters.task_type);
+  if (filters.date_from) params.set("date_from", filters.date_from);
+  if (filters.date_to) params.set("date_to", filters.date_to);
+  if (filters.property_id) params.set("property_id", filters.property_id);
+  if (filters.is_scheduled !== undefined) params.set("is_scheduled", String(filters.is_scheduled));
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
@@ -275,6 +284,34 @@ export function useReopenTask(taskId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["tasks", taskId] });
+    },
+  });
+}
+
+export function useRescheduleTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: RescheduleTaskInput }) =>
+      fetchJson(`/api/tasks/${id}/reschedule`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", id] });
+    },
+  });
+}
+
+export function useUnscheduledTasks() {
+  return useQuery({
+    queryKey: ["tasks", { is_scheduled: false }],
+    queryFn: async () => {
+      const res = await fetchJson<PaginatedResponse<TaskListItem>>(
+        `/api/tasks?is_scheduled=false`
+      );
+      return res.data;
     },
   });
 }

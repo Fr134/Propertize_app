@@ -303,6 +303,7 @@ model Task {
   assignee_type         AssigneeType  @default(INTERNAL)
   external_assignee_id  String?       @db.Uuid
   can_use_supplies      Boolean       @default(false)
+  is_scheduled          Boolean       @default(true)
   // Se dotthouse_booking_id IS NULL → task creato manualmente
   // Se dotthouse_booking_id IS NOT NULL → task generato da prenotazione DotHouse
   dotthouse_booking_id  String?       @unique @db.Uuid
