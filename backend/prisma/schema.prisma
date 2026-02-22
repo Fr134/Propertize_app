@@ -184,8 +184,12 @@ model Property {
   checkin_notes      String?
   checkout_notes     String?
   internal_notes     String?
-  contract_url       String?
-  active             Boolean      @default(true)
+  contract_url           String?
+  active                 Boolean      @default(true)
+  // ID dell'immobile su DotHouse (null = solo manuale)
+  // Se valorizzato, l'immobile è collegato a DotHouse ma si può
+  // comunque creare task manuali su di esso
+  dotthouse_property_id  String?      @unique
   created_at         DateTime     @default(now())
   updated_at         DateTime     @updatedAt
 
@@ -299,6 +303,8 @@ model Task {
   assignee_type         AssigneeType  @default(INTERNAL)
   external_assignee_id  String?       @db.Uuid
   can_use_supplies      Boolean       @default(false)
+  // Se dotthouse_booking_id IS NULL → task creato manualmente
+  // Se dotthouse_booking_id IS NOT NULL → task generato da prenotazione DotHouse
   dotthouse_booking_id  String?       @unique @db.Uuid
   created_at            DateTime      @default(now())
   updated_at            DateTime      @updatedAt
@@ -343,8 +349,12 @@ model DothouseBooking {
   guests_count   Int?
   platform       String?
   status         String    @default("confirmed")
-  sync_status    String    @default("pending")
-  raw_data       Json?
+  sync_status      String    @default("pending")
+  // pending = arrivata da DotHouse, manager deve schedulare la pulizia
+  // scheduled = manager ha assegnato data e operatrice
+  // skipped = manager ha deciso di non creare un task per questa prenotazione
+  scheduling_mode  String    @default("pending")
+  raw_data         Json?
   synced_at      DateTime?
   created_at     DateTime  @default(now())
   updated_at     DateTime  @updatedAt
