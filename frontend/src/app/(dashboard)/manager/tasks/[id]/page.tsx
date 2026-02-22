@@ -3,16 +3,25 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useTask, useDeleteTask, parseChecklist } from "@/hooks/use-tasks";
+import { useTask, useDeleteTask, useStartTask, useDoneTask, parseChecklist } from "@/hooks/use-tasks";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, MapPin, User, Calendar, Camera, CheckCircle2, Circle, ThumbsUp, ThumbsDown, RotateCcw, CheckSquare2, Square, PackageCheck, Trash2, Package } from "lucide-react";
+import { ArrowLeft, MapPin, User, Calendar, Camera, CheckCircle2, Circle, ThumbsUp, ThumbsDown, RotateCcw, CheckSquare2, Square, PackageCheck, Trash2, Package, Clock, Phone, Building2, Play, CheckCheck } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TaskReviewModal } from "@/components/manager/task-review-modal";
 import { TaskReopenModal } from "@/components/manager/task-reopen-modal";
+
+const TASK_TYPE_LABELS: Record<string, { label: string; emoji: string }> = {
+  CLEANING: { label: "Pulizia", emoji: "🧹" },
+  PREPARATION: { label: "Preparazione", emoji: "🏠" },
+  MAINTENANCE: { label: "Manutenzione", emoji: "🔧" },
+  INSPECTION: { label: "Ispezione", emoji: "🔍" },
+  KEY_HANDOVER: { label: "Consegna chiavi", emoji: "🗝️" },
+  OTHER: { label: "Altro", emoji: "📋" },
+};
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("it-IT", {
@@ -31,6 +40,8 @@ export default function ManagerTaskDetailPage({
   const router = useRouter();
   const { data: task, isLoading } = useTask(id);
   const deleteTask = useDeleteTask();
+  const startTask = useStartTask();
+  const doneTask = useDoneTask();
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [reviewMode, setReviewMode] = useState<"approve" | "reject">("approve");
   const [reopenModalOpen, setReopenModalOpen] = useState(false);
@@ -40,7 +51,9 @@ export default function ManagerTaskDetailPage({
   if (!task) return <p className="text-sm text-destructive">Task non trovato.</p>;
 
   const { areas: checklist, staySupplies } = parseChecklist(task.checklist_data);
+  const isCleaning = task.task_type === "CLEANING";
   const canReview = task.status === "COMPLETED";
+  const typeInfo = TASK_TYPE_LABELS[task.task_type] ?? TASK_TYPE_LABELS.OTHER;
 
   const handleApprove = () => {
     setReviewMode("approve");
@@ -64,14 +77,20 @@ export default function ManagerTaskDetailPage({
           <Link href="/manager/tasks"><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{task.property.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {!isCleaning && task.title ? task.title : task.property.name}
+          </h1>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <MapPin className="h-3 w-3" />{task.property.address}
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            {typeInfo.emoji} {typeInfo.label}
+          </Badge>
           <StatusBadge status={task.status} />
-          {canReview && (
+          {/* CLEANING review flow */}
+          {isCleaning && canReview && (
             <>
               <Button variant="outline" size="sm" onClick={handleReject}>
                 <ThumbsDown className="mr-2 h-4 w-4" />
@@ -83,10 +102,23 @@ export default function ManagerTaskDetailPage({
               </Button>
             </>
           )}
-          {task.status === "REJECTED" && (
+          {isCleaning && task.status === "REJECTED" && (
             <Button variant="outline" size="sm" onClick={() => setReopenModalOpen(true)}>
               <RotateCcw className="mr-2 h-4 w-4" />
               Riapri
+            </Button>
+          )}
+          {/* Non-CLEANING action buttons */}
+          {!isCleaning && task.status === "TODO" && (
+            <Button size="sm" onClick={() => startTask.mutateAsync(id)} disabled={startTask.isPending}>
+              <Play className="mr-2 h-4 w-4" />
+              {startTask.isPending ? "Avvio..." : "Inizia"}
+            </Button>
+          )}
+          {!isCleaning && task.status === "IN_PROGRESS" && (
+            <Button size="sm" onClick={() => doneTask.mutateAsync(id)} disabled={doneTask.isPending}>
+              <CheckCheck className="mr-2 h-4 w-4" />
+              {doneTask.isPending ? "Completamento..." : "Segna come completato"}
             </Button>
           )}
           <Button
@@ -108,11 +140,27 @@ export default function ManagerTaskDetailPage({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm">
-              {task.operator
-                ? `${task.operator.first_name} ${task.operator.last_name}`
-                : <span className="italic text-muted-foreground">Esterno</span>}
-            </p>
+            {task.operator ? (
+              <p className="text-sm">
+                {task.operator.first_name} {task.operator.last_name}
+              </p>
+            ) : task.external_assignee ? (
+              <div className="space-y-1">
+                <p className="text-sm font-medium">{task.external_assignee.name}</p>
+                {task.external_assignee.company && (
+                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Building2 className="h-3 w-3" />{task.external_assignee.company}
+                  </p>
+                )}
+                {task.external_assignee.phone && (
+                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Phone className="h-3 w-3" />{task.external_assignee.phone}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm italic text-muted-foreground">Non assegnato</p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -123,6 +171,12 @@ export default function ManagerTaskDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-sm">{formatDate(task.scheduled_date)}</p>
+            {(task.start_time || task.end_time) && (
+              <p className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                {task.start_time ?? "—"} – {task.end_time ?? "—"}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -130,7 +184,8 @@ export default function ManagerTaskDetailPage({
             <CardTitle className="text-sm font-medium">Immobile</CardTitle>
           </CardHeader>
           <CardContent>
-            <Badge variant="outline">{task.property.code}</Badge>
+            <p className="text-sm font-medium">{task.property.name}</p>
+            <Badge variant="outline" className="mt-1">{task.property.code}</Badge>
           </CardContent>
         </Card>
       </div>
@@ -168,7 +223,7 @@ export default function ManagerTaskDetailPage({
         </Card>
       )}
 
-      <Card>
+      {isCleaning && <Card>
         <CardHeader>
           <CardTitle>Checklist</CardTitle>
         </CardHeader>
@@ -238,10 +293,10 @@ export default function ManagerTaskDetailPage({
             ))
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* Stay Supplies */}
-      {staySupplies.length > 0 && (
+      {isCleaning && staySupplies.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -273,8 +328,8 @@ export default function ManagerTaskDetailPage({
         </Card>
       )}
 
-      {/* Supply Usages (consumption) */}
-      {task.supply_usages && task.supply_usages.length > 0 && (
+      {/* Supply Usages (consumption) — CLEANING only */}
+      {isCleaning && task.supply_usages && task.supply_usages.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

@@ -24,7 +24,7 @@ export default function OperatorDashboardPage() {
 
   // Split tasks
   const activeTasks = tasks?.filter((t) => t.status === "TODO" || t.status === "IN_PROGRESS") ?? [];
-  const completedTasks = tasks?.filter((t) => t.status === "COMPLETED" || t.status === "APPROVED" || t.status === "REJECTED") ?? [];
+  const completedTasks = tasks?.filter((t) => t.status === "COMPLETED" || t.status === "APPROVED" || t.status === "REJECTED" || t.status === "DONE") ?? [];
 
   return (
     <div className="space-y-6">

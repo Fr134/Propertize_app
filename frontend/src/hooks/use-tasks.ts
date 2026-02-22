@@ -51,6 +51,13 @@ interface ChecklistDataItem {
   subTasks?: SubTaskData[];
 }
 
+interface ExternalAssignee {
+  id: string;
+  name: string;
+  company: string | null;
+  phone: string | null;
+}
+
 interface TaskListItem {
   id: string;
   property_id: string;
@@ -60,11 +67,15 @@ interface TaskListItem {
   notes: string | null;
   completed_at: string | null;
   created_at: string;
-  task_type?: string;
-  title?: string | null;
-  assignee_type?: string;
+  task_type: string;
+  title: string | null;
+  assignee_type: string;
+  start_time: string | null;
+  end_time: string | null;
+  can_use_supplies: boolean;
   property: TaskProperty;
   operator: TaskOperator | null;
+  external_assignee: ExternalAssignee | null;
 }
 
 // checklist_data can be old array format or new object format
@@ -82,7 +93,11 @@ interface TaskSupplyUsage {
   supply_item: { name: string; unit: string };
 }
 
-interface TaskDetail extends TaskListItem {
+interface TaskExternalAssigneeDetail extends ExternalAssignee {
+  category?: string;
+}
+
+interface TaskDetail extends Omit<TaskListItem, "external_assignee"> {
   checklist_data: ChecklistRaw;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -92,6 +107,7 @@ interface TaskDetail extends TaskListItem {
   reviewer: { id: string; first_name: string; last_name: string } | null;
   photos: TaskPhoto[];
   supply_usages?: TaskSupplyUsage[];
+  external_assignee: TaskExternalAssigneeDetail | null;
 }
 
 // --- Filters ---
@@ -100,6 +116,7 @@ interface TaskFilters {
   assigned_to?: string;
   status?: string;
   date?: string;
+  task_type?: string;
 }
 
 function buildQueryString(filters: TaskFilters): string {
@@ -107,6 +124,7 @@ function buildQueryString(filters: TaskFilters): string {
   if (filters.assigned_to) params.set("assigned_to", filters.assigned_to);
   if (filters.status) params.set("status", filters.status);
   if (filters.date) params.set("date", filters.date);
+  if (filters.task_type) params.set("task_type", filters.task_type);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
@@ -233,6 +251,18 @@ export function useDeleteTask() {
   });
 }
 
+export function useDoneTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (taskId: string) =>
+      fetchJson(`/api/tasks/${taskId}/done`, { method: "PATCH" }),
+    onSuccess: (_data, taskId) => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", taskId] });
+    },
+  });
+}
+
 export function useReopenTask(taskId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -262,4 +292,4 @@ export function parseChecklist(raw: ChecklistRaw): {
   };
 }
 
-export type { TaskListItem, TaskDetail, TaskPhoto, TaskSupplyUsage, ChecklistDataItem, StaySupplyData, TaskFilters };
+export type { TaskListItem, TaskDetail, TaskPhoto, TaskSupplyUsage, ChecklistDataItem, StaySupplyData, TaskFilters, ExternalAssignee };

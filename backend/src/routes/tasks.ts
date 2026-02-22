@@ -23,6 +23,7 @@ router.get("/", auth, async (c) => {
   const assignedTo = c.req.query("assigned_to");
   const status = c.req.query("status");
   const date = c.req.query("date");
+  const taskType = c.req.query("task_type");
 
   const where: Record<string, unknown> = {};
   if (role === "OPERATOR") {
@@ -32,6 +33,7 @@ router.get("/", auth, async (c) => {
   }
   if (status) where.status = status;
   if (date) where.scheduled_date = new Date(date);
+  if (taskType) where.task_type = taskType;
 
   const [tasks, total] = await Promise.all([
     prisma.task.findMany({
@@ -39,6 +41,7 @@ router.get("/", auth, async (c) => {
       include: {
         property: { select: { id: true, name: true, code: true } },
         operator: { select: { id: true, first_name: true, last_name: true } },
+        external_assignee: { select: { id: true, name: true, company: true, phone: true } },
       },
       orderBy: [{ scheduled_date: "desc" }, { created_at: "desc" }],
       take: limit,
@@ -64,79 +67,125 @@ router.post("/", auth, requireManager, async (c) => {
   });
   if (!property) return c.json({ error: "Immobile non trovato" }, 404);
 
-  const operator = await prisma.user.findUnique({
-    where: { id: parsed.data.assigned_to },
-  });
-  if (!operator || operator.role !== "OPERATOR") {
-    return c.json({ error: "Operatrice non trovata" }, 400);
+  const taskType = parsed.data.task_type ?? "CLEANING";
+  const isCleaning = taskType === "CLEANING";
+
+  // Validate assignee based on type
+  if (isCleaning) {
+    if (!parsed.data.assigned_to) {
+      return c.json({ error: "Operatrice obbligatoria per task di pulizia" }, 400);
+    }
+    const operator = await prisma.user.findUnique({
+      where: { id: parsed.data.assigned_to },
+    });
+    if (!operator || operator.role !== "OPERATOR") {
+      return c.json({ error: "Operatrice non trovata" }, 400);
+    }
+  } else {
+    // Non-CLEANING: validate external assignee if EXTERNAL
+    if (parsed.data.assignee_type === "EXTERNAL" && parsed.data.external_assignee_id) {
+      const contact = await prisma.externalContact.findUnique({
+        where: { id: parsed.data.external_assignee_id },
+      });
+      if (!contact || !contact.is_active) {
+        return c.json({ error: "Contatto esterno non trovato" }, 400);
+      }
+    }
+    if (parsed.data.assigned_to) {
+      const operator = await prisma.user.findUnique({
+        where: { id: parsed.data.assigned_to },
+      });
+      if (!operator || operator.role !== "OPERATOR") {
+        return c.json({ error: "Operatrice non trovata" }, 400);
+      }
+    }
   }
 
-  const rawTemplate = property.checklist_template?.items;
-  type TemplateArea = {
-    area: string;
-    description: string;
-    photo_required: boolean;
-    subTasks?: { id: string; text: string }[];
-  };
-  type TemplateSupply = {
-    id: string;
-    text: string;
-    supplyItemId?: string | null;
-    expectedQty?: number;
-  };
+  // Build checklist data only for CLEANING tasks
+  let checklistData: unknown = null;
+  let linkedSupplies: { supplyItemId: string; expectedQty: number }[] = [];
 
-  const templateAreas: TemplateArea[] = Array.isArray(rawTemplate)
-    ? (rawTemplate as unknown as TemplateArea[])
-    : (((rawTemplate as Record<string, unknown>)?.items as TemplateArea[]) ?? []);
-  const templateSupplies: TemplateSupply[] = Array.isArray(rawTemplate)
-    ? []
-    : (((rawTemplate as Record<string, unknown>)?.staySupplies as TemplateSupply[]) ?? []);
+  if (isCleaning) {
+    const rawTemplate = property.checklist_template?.items;
+    type TemplateArea = {
+      area: string;
+      description: string;
+      photo_required: boolean;
+      subTasks?: { id: string; text: string }[];
+    };
+    type TemplateSupply = {
+      id: string;
+      text: string;
+      supplyItemId?: string | null;
+      expectedQty?: number;
+    };
 
-  const checklistData =
-    templateAreas.length > 0
-      ? {
-          areas: templateAreas.map((item) => ({
-            area: item.area,
-            description: item.description,
-            photo_required: item.photo_required,
+    const templateAreas: TemplateArea[] = Array.isArray(rawTemplate)
+      ? (rawTemplate as unknown as TemplateArea[])
+      : (((rawTemplate as Record<string, unknown>)?.items as TemplateArea[]) ?? []);
+    const templateSupplies: TemplateSupply[] = Array.isArray(rawTemplate)
+      ? []
+      : (((rawTemplate as Record<string, unknown>)?.staySupplies as TemplateSupply[]) ?? []);
+
+    if (templateAreas.length > 0) {
+      checklistData = {
+        areas: templateAreas.map((item) => ({
+          area: item.area,
+          description: item.description,
+          photo_required: item.photo_required,
+          completed: false,
+          photo_urls: [] as string[],
+          notes: "",
+          subTasks: (item.subTasks ?? []).map((st) => ({
+            id: st.id,
+            text: st.text,
             completed: false,
-            photo_urls: [] as string[],
-            notes: "",
-            subTasks: (item.subTasks ?? []).map((st) => ({
-              id: st.id,
-              text: st.text,
-              completed: false,
-            })),
           })),
-          staySupplies: templateSupplies.map((s) => ({
-            id: s.id,
-            text: s.text,
-            checked: false,
-            ...(s.supplyItemId
-              ? {
-                  supplyItemId: s.supplyItemId,
-                  expectedQty: s.expectedQty ?? 1,
-                  qtyUsed: 0,
-                }
-              : {}),
-          })),
-        }
-      : null;
+        })),
+        staySupplies: templateSupplies.map((s) => ({
+          id: s.id,
+          text: s.text,
+          checked: false,
+          ...(s.supplyItemId
+            ? {
+                supplyItemId: s.supplyItemId,
+                expectedQty: s.expectedQty ?? 1,
+                qtyUsed: 0,
+              }
+            : {}),
+        })),
+      };
+    }
 
-  const linkedSupplies = templateSupplies.filter((s) => s.supplyItemId);
+    linkedSupplies = templateSupplies
+      .filter((s) => s.supplyItemId)
+      .map((s) => ({ supplyItemId: s.supplyItemId!, expectedQty: s.expectedQty ?? 1 }));
+  }
+
+  // Determine can_use_supplies default
+  const canUseSupplies = parsed.data.can_use_supplies ??
+    (isCleaning || taskType === "PREPARATION");
 
   const task = await prisma.$transaction(async (tx) => {
     const created = await tx.task.create({
       data: {
         property_id: parsed.data.property_id,
-        assigned_to: parsed.data.assigned_to,
+        task_type: taskType,
+        title: parsed.data.title ?? null,
+        assigned_to: parsed.data.assigned_to ?? null,
+        assignee_type: parsed.data.assignee_type ?? "INTERNAL",
+        external_assignee_id: parsed.data.external_assignee_id ?? null,
         scheduled_date: new Date(parsed.data.scheduled_date),
+        start_time: parsed.data.start_time ? new Date(`1970-01-01T${parsed.data.start_time}`) : null,
+        end_time: parsed.data.end_time ? new Date(`1970-01-01T${parsed.data.end_time}`) : null,
+        can_use_supplies: canUseSupplies,
         notes: parsed.data.notes,
         checklist_data: checklistData ?? undefined,
       },
       include: {
         property: { select: { id: true, name: true, code: true } },
         operator: { select: { id: true, first_name: true, last_name: true } },
+        external_assignee: { select: { id: true, name: true, company: true, phone: true } },
       },
     });
 
@@ -144,8 +193,8 @@ router.post("/", auth, requireManager, async (c) => {
       await tx.taskSupplyUsage.createMany({
         data: linkedSupplies.map((s) => ({
           task_id: created.id,
-          supply_item_id: s.supplyItemId!,
-          expected_qty: s.expectedQty ?? 1,
+          supply_item_id: s.supplyItemId,
+          expected_qty: s.expectedQty,
           qty_used: 0,
         })),
       });
@@ -168,6 +217,7 @@ router.get("/:id", auth, async (c) => {
     include: {
       property: { select: { id: true, name: true, code: true, address: true } },
       operator: { select: { id: true, first_name: true, last_name: true, email: true } },
+      external_assignee: { select: { id: true, name: true, company: true, phone: true, category: true } },
       reviewer: { select: { id: true, first_name: true, last_name: true } },
       photos: { orderBy: { checklist_item_index: "asc" } },
       supply_usages: {
@@ -295,6 +345,34 @@ router.patch("/:id/complete", auth, async (c) => {
   }
 
   const updated = await prisma.task.findUnique({ where: { id } });
+  return c.json(updated);
+});
+
+// PATCH /api/tasks/:id/done (non-CLEANING tasks → DONE)
+router.patch("/:id/done", auth, requireManager, async (c) => {
+  const id = c.req.param("id");
+
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task) return c.json({ error: "Task non trovato" }, 404);
+
+  if (task.task_type === "CLEANING") {
+    return c.json({ error: "I task di pulizia seguono il flusso approvazione" }, 400);
+  }
+
+  if (task.status !== "IN_PROGRESS") {
+    return c.json({ error: `Impossibile completare: stato attuale ${task.status}` }, 400);
+  }
+
+  const updated = await prisma.task.update({
+    where: { id },
+    data: { status: "DONE", completed_at: new Date() },
+    include: {
+      property: { select: { id: true, name: true, code: true } },
+      operator: { select: { id: true, first_name: true, last_name: true } },
+      external_assignee: { select: { id: true, name: true, company: true, phone: true } },
+    },
+  });
+
   return c.json(updated);
 });
 

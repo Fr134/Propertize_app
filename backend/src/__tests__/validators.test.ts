@@ -4,6 +4,7 @@ import {
   createPropertySchema,
   createOwnerSchema,
   updateOwnerSchema,
+  createExternalContactSchema,
 } from "../lib/validators";
 
 const VALID_UUID = "00000000-0000-0000-0000-000000000001";
@@ -201,5 +202,78 @@ describe("updateOwnerSchema", () => {
   it("should accept empty string for email (clear field)", () => {
     const result = updateOwnerSchema.safeParse({ email: "" });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("createExternalContactSchema", () => {
+  it("should pass with name and category", () => {
+    const result = createExternalContactSchema.safeParse({
+      name: "Mario Idraulico",
+      category: "PLUMBER",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should fail without name", () => {
+    const result = createExternalContactSchema.safeParse({
+      category: "PLUMBER",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("should fail with empty name", () => {
+    const result = createExternalContactSchema.safeParse({
+      name: "",
+      category: "PLUMBER",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("should fail without category", () => {
+    const result = createExternalContactSchema.safeParse({
+      name: "Mario Idraulico",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("should fail with invalid category", () => {
+    const result = createExternalContactSchema.safeParse({
+      name: "Mario",
+      category: "INVALID",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("should pass with all optional fields", () => {
+    const result = createExternalContactSchema.safeParse({
+      name: "Mario Idraulico",
+      phone: "+39 333 1234567",
+      email: "mario@plumber.it",
+      company: "Idraulica SRL",
+      category: "PLUMBER",
+      notes: "Disponibile nel weekend",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should accept empty strings for optional fields", () => {
+    const result = createExternalContactSchema.safeParse({
+      name: "Mario",
+      phone: "",
+      email: "",
+      company: "",
+      category: "OTHER",
+      notes: "",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should fail with invalid email format", () => {
+    const result = createExternalContactSchema.safeParse({
+      name: "Mario",
+      email: "not-email",
+      category: "HANDYMAN",
+    });
+    expect(result.success).toBe(false);
   });
 });

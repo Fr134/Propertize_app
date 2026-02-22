@@ -16,6 +16,7 @@ const STATUS_COLORS: Record<string, string> = {
   COMPLETED: "bg-yellow-100 text-yellow-800 border-yellow-200",
   APPROVED: "bg-green-100 text-green-700 border-green-200",
   REJECTED: "bg-red-100 text-red-700 border-red-200",
+  DONE: "bg-green-100 text-green-700 border-green-200",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -24,6 +25,16 @@ const STATUS_LABELS: Record<string, string> = {
   COMPLETED: "Completato",
   APPROVED: "Approvato",
   REJECTED: "Respinto",
+  DONE: "Completato",
+};
+
+const TASK_TYPE_LABELS: Record<string, { label: string; emoji: string }> = {
+  CLEANING: { label: "Pulizia", emoji: "🧹" },
+  PREPARATION: { label: "Preparazione", emoji: "🏠" },
+  MAINTENANCE: { label: "Manutenzione", emoji: "🔧" },
+  INSPECTION: { label: "Ispezione", emoji: "🔍" },
+  KEY_HANDOVER: { label: "Consegna chiavi", emoji: "🗝️" },
+  OTHER: { label: "Altro", emoji: "📋" },
 };
 
 function toDateKey(date: Date): string {
@@ -172,7 +183,14 @@ export function TaskCalendar({ tasks, properties }: TaskCalendarProps) {
                         )}
                       >
                         <div className="flex flex-col gap-0.5 min-h-[36px]">
-                          {cellTasks.map((task) => (
+                          {cellTasks.map((task) => {
+                            const typeInfo = TASK_TYPE_LABELS[task.task_type] ?? TASK_TYPE_LABELS.OTHER;
+                            const assigneeLabel = task.operator
+                              ? `${task.operator.first_name} ${task.operator.last_name.charAt(0)}.`
+                              : task.external_assignee
+                              ? task.external_assignee.name
+                              : (task.title ?? "—");
+                            return (
                             <Link key={task.id} href={`/manager/tasks/${task.id}`}>
                               <div
                                 className={cn(
@@ -180,14 +198,13 @@ export function TaskCalendar({ tasks, properties }: TaskCalendarProps) {
                                   STATUS_COLORS[task.status] ??
                                     "bg-gray-100 text-gray-700 border-gray-200"
                                 )}
-                                title={`${task.operator ? `${task.operator.first_name} ${task.operator.last_name}` : (task.title ?? "Esterno")} – ${STATUS_LABELS[task.status] ?? task.status}`}
+                                title={`${typeInfo.label}: ${assigneeLabel} – ${STATUS_LABELS[task.status] ?? task.status}`}
                               >
-                                {task.operator
-                                  ? `${task.operator.first_name} ${task.operator.last_name.charAt(0)}.`
-                                  : (task.title ?? "Esterno")}
+                                {typeInfo.emoji} {assigneeLabel}
                               </div>
                             </Link>
-                          ))}
+                            );
+                          })}
                         </div>
                       </td>
                     );

@@ -19,7 +19,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ClipboardList, Trash2, List, CalendarDays } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+
+const TASK_TYPE_LABELS: Record<string, { label: string; emoji: string }> = {
+  CLEANING: { label: "Pulizia", emoji: "🧹" },
+  PREPARATION: { label: "Preparazione", emoji: "🏠" },
+  MAINTENANCE: { label: "Manutenzione", emoji: "🔧" },
+  INSPECTION: { label: "Ispezione", emoji: "🔍" },
+  KEY_HANDOVER: { label: "Consegna chiavi", emoji: "🗝️" },
+  OTHER: { label: "Altro", emoji: "📋" },
+};
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("it-IT", {
@@ -30,7 +46,8 @@ function formatDate(dateStr: string) {
 }
 
 export default function ManagerTasksPage() {
-  const { data: tasks, isLoading } = useTasks();
+  const [typeFilter, setTypeFilter] = useState<string>("");
+  const { data: tasks, isLoading } = useTasks(typeFilter ? { task_type: typeFilter } : {});
   const { data: properties } = useProperties();
   const deleteTask = useDeleteTask();
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -41,6 +58,20 @@ export default function ManagerTasksPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Task</h1>
         <div className="flex items-center gap-2">
+          {/* Type filter */}
+          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v === "ALL" ? "" : v)}>
+            <SelectTrigger className="w-[160px] h-9">
+              <SelectValue placeholder="Tutti i tipi" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Tutti i tipi</SelectItem>
+              {Object.entries(TASK_TYPE_LABELS).map(([value, { label, emoji }]) => (
+                <SelectItem key={value} value={value}>
+                  {emoji} {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {/* View toggle */}
           <div className="flex rounded-md border overflow-hidden">
             <button
@@ -89,21 +120,24 @@ export default function ManagerTasksPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Immobile</TableHead>
-                <TableHead>Operatrice</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Assegnato a</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Stato</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tasks.map((task) => (
+              {tasks.map((task) => {
+                const typeInfo = TASK_TYPE_LABELS[task.task_type] ?? TASK_TYPE_LABELS.OTHER;
+                return (
                 <TableRow key={task.id}>
                   <TableCell>
                     <Link
                       href={`/manager/tasks/${task.id}`}
                       className="font-medium hover:underline"
                     >
-                      {task.property.name}
+                      {task.task_type !== "CLEANING" && task.title ? task.title : task.property.name}
                     </Link>
                     <div className="mt-0.5">
                       <Badge variant="outline" className="text-xs">
@@ -112,9 +146,14 @@ export default function ManagerTasksPage() {
                     </div>
                   </TableCell>
                   <TableCell>
+                    <span className="text-xs">{typeInfo.emoji} {typeInfo.label}</span>
+                  </TableCell>
+                  <TableCell>
                     {task.operator
                       ? `${task.operator.first_name} ${task.operator.last_name}`
-                      : <span className="text-muted-foreground italic">Esterno</span>}
+                      : task.external_assignee
+                      ? <span>{task.external_assignee.name}</span>
+                      : <span className="text-muted-foreground italic">Non assegnato</span>}
                   </TableCell>
                   <TableCell>{formatDate(task.scheduled_date)}</TableCell>
                   <TableCell>
@@ -130,7 +169,8 @@ export default function ManagerTasksPage() {
                     </button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>
