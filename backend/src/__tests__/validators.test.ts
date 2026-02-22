@@ -3,6 +3,7 @@ import {
   createTaskSchema,
   createPropertySchema,
   createOwnerSchema,
+  updateOwnerSchema,
 } from "../lib/validators";
 
 const VALID_UUID = "00000000-0000-0000-0000-000000000001";
@@ -152,5 +153,53 @@ describe("createOwnerSchema", () => {
       email: "not-an-email",
     });
     expect(result.success).toBe(false);
+  });
+
+  it("should accept empty string for optional email", () => {
+    const result = createOwnerSchema.safeParse({
+      name: "Mario Rossi",
+      email: "",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should fail when name is missing entirely", () => {
+    const result = createOwnerSchema.safeParse({ email: "a@b.com" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("updateOwnerSchema", () => {
+  it("should pass with empty object (all fields optional)", () => {
+    const result = updateOwnerSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it("should pass with only name", () => {
+    const result = updateOwnerSchema.safeParse({ name: "Nuovo Nome" });
+    expect(result.success).toBe(true);
+  });
+
+  it("should fail with empty name (min 1 char)", () => {
+    const result = updateOwnerSchema.safeParse({ name: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("should pass with partial update fields", () => {
+    const result = updateOwnerSchema.safeParse({
+      phone: "+39 333 9999999",
+      iban: "IT60X0542811101000000654321",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should fail with invalid email", () => {
+    const result = updateOwnerSchema.safeParse({ email: "bad" });
+    expect(result.success).toBe(false);
+  });
+
+  it("should accept empty string for email (clear field)", () => {
+    const result = updateOwnerSchema.safeParse({ email: "" });
+    expect(result.success).toBe(true);
   });
 });

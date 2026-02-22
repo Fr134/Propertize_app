@@ -11,6 +11,7 @@ import {
   Package,
   CheckSquare,
   Receipt,
+  Users,
 } from "lucide-react";
 
 interface NavItem {
@@ -22,6 +23,7 @@ interface NavItem {
 const managerNav: NavItem[] = [
   { label: "Dashboard", href: "/manager", icon: LayoutDashboard },
   { label: "Immobili", href: "/manager/properties", icon: Building2 },
+  { label: "Proprietari", href: "/manager/owners", icon: Users },
   { label: "Task", href: "/manager/tasks", icon: ClipboardList },
   { label: "Segnalazioni", href: "/manager/reports", icon: AlertTriangle },
   { label: "Scorte", href: "/manager/supplies", icon: Package },
