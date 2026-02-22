@@ -29,24 +29,30 @@ enum TaskStatus {
   COMPLETED
   APPROVED
   REJECTED
+  DONE
 }
 
-enum SupplyCategory {
-  CAFFE
-  TE
-  ZUCCHERO
-  CARTA_IGIENICA
-  TOVAGLIOLI
-  SAPONE_MANI
-  SHAMPOO
-  BAGNOSCHIUMA
-  ALTRO
+enum TaskType {
+  CLEANING
+  PREPARATION
+  MAINTENANCE
+  INSPECTION
+  KEY_HANDOVER
+  OTHER
 }
 
-enum SupplyLevelEnum {
-  OK
-  IN_ESAURIMENTO
-  ESAURITO
+enum AssigneeType {
+  INTERNAL
+  EXTERNAL
+}
+
+enum ExternalContactCategory {
+  PLUMBER
+  ELECTRICIAN
+  CLEANER
+  HANDYMAN
+  INSPECTOR
+  OTHER
 }
 
 enum LinenType {
@@ -79,6 +85,23 @@ enum ReportStatus {
   RESOLVED
 }
 
+enum ItemCondition {
+  GOOD
+  DAMAGED
+  BROKEN
+  REPLACED
+}
+
+enum ExpenseCategory {
+  MAINTENANCE
+  CLEANING
+  UTILITIES
+  SUPPLIES
+  INSURANCE
+  TAX
+  OTHER
+}
+
 enum TransactionType {
   PURCHASE_IN
   CONSUMPTION_OUT
@@ -103,12 +126,14 @@ model User {
   first_name    String
   last_name     String
   role          UserRole
+  phone         String?
+  avatar_url    String?
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
-  assigned_tasks   CleaningTask[]      @relation("AssignedTasks")
-  reviewed_tasks   CleaningTask[]      @relation("ReviewedTasks")
-  reopened_tasks   CleaningTask[]      @relation("ReopenedTasks")
+  assigned_tasks   Task[]              @relation("AssignedTasks")
+  reviewed_tasks   Task[]              @relation("ReviewedTasks")
+  reopened_tasks   Task[]              @relation("ReopenedTasks")
   reports_created  MaintenanceReport[]
   expenses_created Expense[]
 
@@ -116,10 +141,17 @@ model User {
 }
 
 model Owner {
-  id         String   @id @default(uuid()) @db.Uuid
-  name       String
-  email      String?
-  created_at DateTime @default(now())
+  id                 String    @id @default(uuid()) @db.Uuid
+  name               String
+  email              String?
+  phone              String?
+  address            String?
+  fiscal_code        String?
+  iban               String?
+  notes              String?
+  status             String    @default("active")
+  contract_signed_at DateTime?
+  created_at         DateTime  @default(now())
 
   properties Property[]
 
@@ -127,22 +159,46 @@ model Owner {
 }
 
 model Property {
-  id            String       @id @default(uuid()) @db.Uuid
-  name          String
-  code          String       @unique
-  address       String
-  property_type PropertyType
-  owner_id      String?      @db.Uuid
-  created_at    DateTime     @default(now())
-  updated_at    DateTime     @updatedAt
+  id                 String       @id @default(uuid()) @db.Uuid
+  name               String
+  code               String       @unique
+  address            String
+  property_type      PropertyType
+  owner_id           String?      @db.Uuid
+  bedroom_count      Int?
+  bathroom_count     Int?
+  max_guests         Int?
+  floor_area_sqm     Decimal?     @db.Decimal(8, 2)
+  floor_number       Int?
+  has_elevator       Boolean?
+  has_parking        Boolean?
+  has_pool           Boolean?
+  wifi_network       String?
+  wifi_password      String?
+  door_code          String?
+  alarm_code         String?
+  gas_meter_location String?
+  water_shutoff      String?
+  electricity_panel  String?
+  trash_schedule     String?
+  checkin_notes      String?
+  checkout_notes     String?
+  internal_notes     String?
+  contract_url       String?
+  active             Boolean      @default(true)
+  created_at         DateTime     @default(now())
+  updated_at         DateTime     @updatedAt
 
   owner              Owner?             @relation(fields: [owner_id], references: [id])
   checklist_template ChecklistTemplate?
-  cleaning_tasks     CleaningTask[]
-  supply_levels      SupplyLevel[]
+  tasks              Task[]
   linen_inventory    LinenInventory[]
   reports            MaintenanceReport[]
   expenses           Expense[]
+  master_file        PropertyMasterFile?
+  inventory_items    PropertyInventoryItem[]
+  supply_stocks      PropertySupplyStock[]
+  bookings           DothouseBooking[]
 
   @@map("properties")
 }
@@ -159,33 +215,145 @@ model ChecklistTemplate {
   @@map("checklist_templates")
 }
 
-model CleaningTask {
-  id              String     @id @default(uuid()) @db.Uuid
-  property_id     String     @db.Uuid
-  assigned_to     String     @db.Uuid
-  scheduled_date  DateTime   @db.Date
-  status          TaskStatus @default(TODO)
-  checklist_data  Json?
-  notes           String?
-  completed_at    DateTime?
-  reviewed_at     DateTime?
-  reviewed_by     String?    @db.Uuid
-  rejection_notes String?
-  reopen_note     String?
-  reopen_at       DateTime?
-  reopen_by       String?    @db.Uuid
-  created_at      DateTime   @default(now())
-  updated_at      DateTime   @updatedAt
+model PropertyMasterFile {
+  id                String   @id @default(uuid()) @db.Uuid
+  property_id       String   @unique @db.Uuid
+  plumber_name      String?
+  plumber_phone     String?
+  electrician_name  String?
+  electrician_phone String?
+  cleaner_notes     String?
+  cadastral_id      String?
+  cie_code          String?
+  tourism_license   String?
+  custom_fields     Json?
+  cover_photo_url   String?
+  floorplan_url     String?
+  additional_photos Json?
+  drive_folder_url  String?
+  updated_at        DateTime @updatedAt
 
-  property      Property   @relation(fields: [property_id], references: [id])
-  operator      User       @relation("AssignedTasks", fields: [assigned_to], references: [id])
-  reviewer      User?      @relation("ReviewedTasks", fields: [reviewed_by], references: [id])
-  reopener      User?      @relation("ReopenedTasks", fields: [reopen_by], references: [id])
-  photos        TaskPhoto[]
-  reports       MaintenanceReport[]
-  supply_usages CleaningTaskSupplyUsage[]
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
 
-  @@map("cleaning_tasks")
+  @@map("property_master_files")
+}
+
+model PropertyInventoryItem {
+  id               String         @id @default(uuid()) @db.Uuid
+  property_id      String         @db.Uuid
+  room             String
+  name             String
+  brand            String?
+  model            String?
+  serial_number    String?
+  purchase_date    DateTime?
+  warranty_expires DateTime?
+  notes            String?
+  photo_url        String?
+  condition        ItemCondition  @default(GOOD)
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
+
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@index([property_id, room])
+  @@map("property_inventory_items")
+}
+
+model PropertySupplyStock {
+  id              String   @id @default(uuid()) @db.Uuid
+  property_id     String   @db.Uuid
+  supply_item_id  String   @db.Uuid
+  qty_current     Int      @default(0)
+  qty_standard    Int      @default(1)
+  low_threshold   Int      @default(0)
+  updated_at      DateTime @updatedAt
+  updated_by_task String?  @db.Uuid
+
+  property    Property   @relation(fields: [property_id], references: [id], onDelete: Cascade)
+  supply_item SupplyItem @relation(fields: [supply_item_id], references: [id])
+
+  @@unique([property_id, supply_item_id])
+  @@map("property_supply_stocks")
+}
+
+model Task {
+  id                    String        @id @default(uuid()) @db.Uuid
+  property_id           String        @db.Uuid
+  assigned_to           String?       @db.Uuid
+  scheduled_date        DateTime      @db.Date
+  status                TaskStatus    @default(TODO)
+  checklist_data        Json?
+  notes                 String?
+  completed_at          DateTime?
+  reviewed_at           DateTime?
+  reviewed_by           String?       @db.Uuid
+  rejection_notes       String?
+  reopen_note           String?
+  reopen_at             DateTime?
+  reopen_by             String?       @db.Uuid
+  task_type             TaskType      @default(CLEANING)
+  title                 String?
+  start_time            DateTime?
+  end_time              DateTime?
+  assignee_type         AssigneeType  @default(INTERNAL)
+  external_assignee_id  String?       @db.Uuid
+  can_use_supplies      Boolean       @default(false)
+  dotthouse_booking_id  String?       @unique @db.Uuid
+  created_at            DateTime      @default(now())
+  updated_at            DateTime      @updatedAt
+
+  property           Property          @relation(fields: [property_id], references: [id])
+  operator           User?             @relation("AssignedTasks", fields: [assigned_to], references: [id])
+  reviewer           User?             @relation("ReviewedTasks", fields: [reviewed_by], references: [id])
+  reopener           User?             @relation("ReopenedTasks", fields: [reopen_by], references: [id])
+  external_assignee  ExternalContact?  @relation(fields: [external_assignee_id], references: [id])
+  dotthouse_booking  DothouseBooking?  @relation(fields: [dotthouse_booking_id], references: [id])
+  photos             TaskPhoto[]
+  reports            MaintenanceReport[]
+  supply_usages      TaskSupplyUsage[]
+
+  @@map("tasks")
+}
+
+model ExternalContact {
+  id         String                  @id @default(uuid()) @db.Uuid
+  name       String
+  phone      String?
+  email      String?
+  company    String?
+  category   ExternalContactCategory
+  notes      String?
+  is_active  Boolean                 @default(true)
+  created_at DateTime                @default(now())
+  updated_at DateTime                @updatedAt
+
+  assigned_tasks Task[]
+
+  @@map("external_contacts")
+}
+
+model DothouseBooking {
+  id             String    @id @default(uuid()) @db.Uuid
+  property_id    String    @db.Uuid
+  external_id    String    @unique
+  guest_name     String?
+  checkin_date   DateTime  @db.Date
+  checkout_date  DateTime  @db.Date
+  guests_count   Int?
+  platform       String?
+  status         String    @default("confirmed")
+  sync_status    String    @default("pending")
+  raw_data       Json?
+  synced_at      DateTime?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  property       Property  @relation(fields: [property_id], references: [id])
+  cleaning_task  Task?
+
+  @@index([property_id, checkin_date])
+  @@map("dotthouse_bookings")
 }
 
 model TaskPhoto {
@@ -195,23 +363,9 @@ model TaskPhoto {
   photo_url            String
   uploaded_at          DateTime @default(now())
 
-  task CleaningTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [task_id], references: [id], onDelete: Cascade)
 
   @@map("task_photos")
-}
-
-model SupplyLevel {
-  id          String          @id @default(uuid()) @db.Uuid
-  property_id String          @db.Uuid
-  task_id     String?         @db.Uuid
-  category    SupplyCategory
-  level       SupplyLevelEnum
-  updated_at  DateTime        @default(now()) @updatedAt
-
-  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
-
-  @@unique([property_id, category])
-  @@map("supply_levels")
 }
 
 model LinenInventory {
@@ -243,7 +397,7 @@ model MaintenanceReport {
   resolved_at DateTime?
 
   property Property      @relation(fields: [property_id], references: [id])
-  task     CleaningTask?  @relation(fields: [task_id], references: [id])
+  task     Task?          @relation(fields: [task_id], references: [id])
   author   User           @relation(fields: [created_by], references: [id])
   photos   ReportPhoto[]
 
@@ -262,19 +416,20 @@ model ReportPhoto {
 }
 
 model Expense {
-  id           String   @id @default(uuid()) @db.Uuid
-  property_id  String   @db.Uuid
-  created_by   String   @db.Uuid
+  id           String           @id @default(uuid()) @db.Uuid
+  property_id  String           @db.Uuid
+  created_by   String           @db.Uuid
   description  String
-  amount       Decimal  @db.Decimal(10, 2)
-  vat_amount   Decimal? @db.Decimal(10, 2)
-  expense_date DateTime @db.Date @default(now())
-  is_billed    Boolean  @default(false)
+  amount       Decimal          @db.Decimal(10, 2)
+  vat_amount   Decimal?         @db.Decimal(10, 2)
+  expense_date DateTime         @db.Date @default(now())
+  is_billed    Boolean          @default(false)
   billed_at    DateTime?
-  is_paid      Boolean  @default(false)
+  is_paid      Boolean          @default(false)
   paid_at      DateTime?
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  category     ExpenseCategory?
+  created_at   DateTime         @default(now())
+  updated_at   DateTime         @updatedAt
 
   property Property       @relation(fields: [property_id], references: [id])
   author   User           @relation(fields: [created_by], references: [id])
@@ -307,10 +462,11 @@ model SupplyItem {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  balance      InventoryBalance?
-  transactions InventoryTransaction[]
-  task_usages  CleaningTaskSupplyUsage[]
-  order_lines  PurchaseOrderLine[]
+  balance       InventoryBalance?
+  transactions  InventoryTransaction[]
+  task_usages   TaskSupplyUsage[]
+  order_lines   PurchaseOrderLine[]
+  supply_stocks PropertySupplyStock[]
 
   @@map("supply_items")
 }
@@ -343,7 +499,7 @@ model InventoryTransaction {
   @@map("inventory_transactions")
 }
 
-model CleaningTaskSupplyUsage {
+model TaskSupplyUsage {
   id             String   @id @default(uuid()) @db.Uuid
   task_id        String   @db.Uuid
   supply_item_id String   @db.Uuid
@@ -352,11 +508,11 @@ model CleaningTaskSupplyUsage {
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
-  task        CleaningTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
-  supply_item SupplyItem   @relation(fields: [supply_item_id], references: [id])
+  task        Task       @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  supply_item SupplyItem @relation(fields: [supply_item_id], references: [id])
 
   @@unique([task_id, supply_item_id])
-  @@map("cleaning_task_supply_usages")
+  @@map("task_supply_usages")
 }
 
 model PurchaseOrder {
