@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
 import { updateSupplySchema } from "../lib/validators";
+import { levelToQty } from "../lib/supply-utils";
 import type { AppEnv } from "../types";
 
 const router = new Hono<AppEnv>();
@@ -28,12 +29,7 @@ router.patch("/", auth, async (c) => {
 
     const qtyStandard = existing?.qty_standard ?? 5;
     const lowThreshold = existing?.low_threshold ?? 1;
-    const qtyCurrent =
-      supply.level === "OK"
-        ? qtyStandard
-        : supply.level === "IN_ESAURIMENTO"
-          ? lowThreshold
-          : 0;
+    const qtyCurrent = levelToQty(supply.level, qtyStandard, lowThreshold);
 
     const result = await prisma.propertySupplyStock.upsert({
       where: { property_id_supply_item_id: key },

@@ -2,7 +2,11 @@
   "name": "propertize-housekeeping-app",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["backend", "frontend", "shared"],
+  "workspaces": [
+    "backend",
+    "frontend",
+    "shared"
+  ],
   "scripts": {
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
@@ -11,9 +15,14 @@
     "build:frontend": "npm run build --workspace=frontend",
     "db:migrate": "npm run db:migrate --workspace=backend",
     "db:push": "npm run db:push --workspace=backend",
-    "db:studio": "npm run db:studio --workspace=backend"
+    "db:studio": "npm run db:studio --workspace=backend",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "@vitest/coverage-v8": "^4.0.18",
+    "concurrently": "^9.0.0",
+    "vitest": "^4.0.18"
   }
 }

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/fetch";
 import type { UpdateSupplyInput } from "@/lib/validators";
+export { deriveLevel } from "@/lib/supply-utils";
 
 // Matches GET /api/properties/:id/supplies response (PropertySupplyStock + supply_item)
 interface PropertySupplyStockItem {
@@ -27,13 +28,6 @@ interface LowSupplyStockItem {
   low_threshold: number;
   property_name: string;
   property_code: string;
-}
-
-/** Derive display level from qty_current vs thresholds */
-export function deriveLevel(item: Pick<PropertySupplyStockItem, "qty_current" | "low_threshold">): "OK" | "IN_ESAURIMENTO" | "ESAURITO" {
-  if (item.qty_current <= 0) return "ESAURITO";
-  if (item.qty_current <= item.low_threshold) return "IN_ESAURIMENTO";
-  return "OK";
 }
 
 export function usePropertySupplies(propertyId: string) {
