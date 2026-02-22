@@ -19,21 +19,20 @@ router.get("/manager", auth, requireManager, async (c) => {
     todayTasksCompleted,
     todayTasksTotal,
   ] = await Promise.all([
-    prisma.cleaningTask.count({ where: { status: "COMPLETED" } }),
+    prisma.task.count({ where: { status: "COMPLETED" } }),
     prisma.maintenanceReport.count({ where: { status: "OPEN" } }),
-    prisma.supplyLevel
-      .groupBy({
-        by: ["property_id"],
-        where: { level: { in: ["IN_ESAURIMENTO", "ESAURITO"] } },
-      })
-      .then((groups) => groups.length),
-    prisma.cleaningTask.count({
+    prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(DISTINCT property_id) as count
+      FROM property_supply_stocks
+      WHERE qty_current <= low_threshold
+    `.then((r) => Number(r[0]?.count ?? 0)),
+    prisma.task.count({
       where: {
         scheduled_date: { gte: today, lt: tomorrow },
         status: { in: ["COMPLETED", "APPROVED"] },
       },
     }),
-    prisma.cleaningTask.count({
+    prisma.task.count({
       where: { scheduled_date: { gte: today, lt: tomorrow } },
     }),
   ]);

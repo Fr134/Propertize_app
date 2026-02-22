@@ -59,7 +59,7 @@ interface PropertyListItem {
   address: string;
   property_type: string;
   created_at: string;
-  _count: { cleaning_tasks: number };
+  _count: { tasks: number };
   owner: { id: string; name: string } | null;
 }
 
@@ -78,7 +78,6 @@ interface PropertyDetail {
   address: string;
   property_type: string;
   checklist_template: ChecklistTemplate | null;
-  supply_levels: { id: string; category: string; level: string }[];
   linen_inventory: { id: string; type: string; status: string; quantity: number }[];
 }
 

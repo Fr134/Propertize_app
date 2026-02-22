@@ -14,7 +14,7 @@ export async function postConsumptionTx(
   taskId: string,
   approvedBy: string
 ): Promise<void> {
-  const usages = await tx.cleaningTaskSupplyUsage.findMany({
+  const usages = await tx.taskSupplyUsage.findMany({
     where: { task_id: taskId, qty_used: { gt: 0 } },
   });
 

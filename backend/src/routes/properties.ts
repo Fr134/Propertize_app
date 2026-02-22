@@ -19,7 +19,7 @@ router.get("/", auth, async (c) => {
     prisma.property.findMany({
       orderBy: { name: "asc" },
       include: {
-        _count: { select: { cleaning_tasks: true } },
+        _count: { select: { tasks: true } },
         owner: { select: { id: true, name: true } },
       },
       take: limit,
@@ -67,7 +67,6 @@ router.get("/:id", auth, async (c) => {
     where: { id },
     include: {
       checklist_template: true,
-      supply_levels: { orderBy: { category: "asc" } },
       linen_inventory: { orderBy: [{ type: "asc" }, { status: "asc" }] },
     },
   });
@@ -106,9 +105,10 @@ router.put("/:id/checklist", auth, requireManager, async (c) => {
 // GET /api/properties/:id/supplies
 router.get("/:id/supplies", auth, async (c) => {
   const id = c.req.param("id");
-  const supplies = await prisma.supplyLevel.findMany({
+  const supplies = await prisma.propertySupplyStock.findMany({
     where: { property_id: id },
-    orderBy: { category: "asc" },
+    include: { supply_item: { select: { name: true, unit: true } } },
+    orderBy: { supply_item: { name: "asc" } },
   });
   return c.json(supplies);
 });

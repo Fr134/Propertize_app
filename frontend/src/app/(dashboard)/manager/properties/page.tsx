@@ -72,7 +72,7 @@ export default function PropertiesPage() {
                     {propertyTypeLabels[property.property_type] ?? property.property_type}
                   </TableCell>
                   <TableCell className="text-right">
-                    {property._count.cleaning_tasks}
+                    {property._count.tasks}
                   </TableCell>
                 </TableRow>
               ))}

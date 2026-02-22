@@ -34,7 +34,7 @@ router.get("/", auth, async (c) => {
   if (date) where.scheduled_date = new Date(date);
 
   const [tasks, total] = await Promise.all([
-    prisma.cleaningTask.findMany({
+    prisma.task.findMany({
       where,
       include: {
         property: { select: { id: true, name: true, code: true } },
@@ -44,7 +44,7 @@ router.get("/", auth, async (c) => {
       take: limit,
       skip,
     }),
-    prisma.cleaningTask.count({ where }),
+    prisma.task.count({ where }),
   ]);
 
   return c.json(createPaginatedResponse(tasks, total, page, limit));
@@ -126,7 +126,7 @@ router.post("/", auth, requireManager, async (c) => {
   const linkedSupplies = templateSupplies.filter((s) => s.supplyItemId);
 
   const task = await prisma.$transaction(async (tx) => {
-    const created = await tx.cleaningTask.create({
+    const created = await tx.task.create({
       data: {
         property_id: parsed.data.property_id,
         assigned_to: parsed.data.assigned_to,
@@ -141,7 +141,7 @@ router.post("/", auth, requireManager, async (c) => {
     });
 
     if (linkedSupplies.length > 0) {
-      await tx.cleaningTaskSupplyUsage.createMany({
+      await tx.taskSupplyUsage.createMany({
         data: linkedSupplies.map((s) => ({
           task_id: created.id,
           supply_item_id: s.supplyItemId!,
@@ -163,7 +163,7 @@ router.get("/:id", auth, async (c) => {
   const userId = c.get("userId");
   const role = c.get("role");
 
-  const task = await prisma.cleaningTask.findUnique({
+  const task = await prisma.task.findUnique({
     where: { id },
     include: {
       property: { select: { id: true, name: true, code: true, address: true } },
@@ -190,17 +190,17 @@ router.get("/:id", auth, async (c) => {
 router.delete("/:id", auth, requireManager, async (c) => {
   const id = c.req.param("id");
 
-  const task = await prisma.cleaningTask.findUnique({ where: { id } });
+  const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return c.json({ error: "Task non trovato" }, 404);
 
   await prisma.$transaction([
     prisma.taskPhoto.deleteMany({ where: { task_id: id } }),
-    prisma.cleaningTaskSupplyUsage.deleteMany({ where: { task_id: id } }),
+    prisma.taskSupplyUsage.deleteMany({ where: { task_id: id } }),
     prisma.maintenanceReport.updateMany({
       where: { task_id: id },
       data: { task_id: null },
     }),
-    prisma.cleaningTask.delete({ where: { id } }),
+    prisma.task.delete({ where: { id } }),
   ]);
 
   return c.json({ success: true });
@@ -211,20 +211,20 @@ router.patch("/:id/start", auth, async (c) => {
   const id = c.req.param("id");
   const userId = c.get("userId");
 
-  const { count } = await prisma.cleaningTask.updateMany({
+  const { count } = await prisma.task.updateMany({
     where: { id, status: "TODO", assigned_to: userId },
     data: { status: "IN_PROGRESS" },
   });
 
   if (count === 0) {
-    const task = await prisma.cleaningTask.findUnique({ where: { id } });
+    const task = await prisma.task.findUnique({ where: { id } });
     if (!task) return c.json({ error: "Task non trovato" }, 404);
     if (task.assigned_to !== userId)
       return c.json({ error: "Non sei assegnata a questo task" }, 403);
     return c.json({ ...task, alreadyApplied: true });
   }
 
-  const updated = await prisma.cleaningTask.findUnique({ where: { id } });
+  const updated = await prisma.task.findUnique({ where: { id } });
   return c.json(updated);
 });
 
@@ -233,7 +233,7 @@ router.patch("/:id/complete", auth, async (c) => {
   const id = c.req.param("id");
   const userId = c.get("userId");
 
-  const task = await prisma.cleaningTask.findUnique({
+  const task = await prisma.task.findUnique({
     where: { id },
     include: { photos: true },
   });
@@ -284,17 +284,17 @@ router.patch("/:id/complete", auth, async (c) => {
     }
   }
 
-  const { count } = await prisma.cleaningTask.updateMany({
+  const { count } = await prisma.task.updateMany({
     where: { id, status: "IN_PROGRESS", assigned_to: userId },
     data: { status: "COMPLETED", completed_at: new Date() },
   });
 
   if (count === 0) {
-    const current = await prisma.cleaningTask.findUnique({ where: { id } });
+    const current = await prisma.task.findUnique({ where: { id } });
     return c.json({ ...current, alreadyApplied: true });
   }
 
-  const updated = await prisma.cleaningTask.findUnique({ where: { id } });
+  const updated = await prisma.task.findUnique({ where: { id } });
   return c.json(updated);
 });
 
@@ -305,7 +305,7 @@ router.patch("/:id/checklist", auth, async (c) => {
   const role = c.get("role");
   const body = await c.req.json();
 
-  const task = await prisma.cleaningTask.findUnique({ where: { id } });
+  const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return c.json({ error: "Task non trovato" }, 404);
   if (role === "OPERATOR" && task.assigned_to !== userId) {
     return c.json({ error: "Accesso negato" }, 403);
@@ -368,7 +368,7 @@ router.patch("/:id/checklist", auth, async (c) => {
 
     const supplyItemId = staySupplies[supplyIndex].supplyItemId as string | undefined;
 
-    const updated = await prisma.cleaningTask.update({
+    const updated = await prisma.task.update({
       where: { id },
       data: {
         checklist_data: serializeChecklistData(areas, staySupplies, isObject) as Prisma.InputJsonValue,
@@ -376,7 +376,7 @@ router.patch("/:id/checklist", auth, async (c) => {
     });
 
     if (supplyItemId) {
-      await prisma.cleaningTaskSupplyUsage.upsert({
+      await prisma.taskSupplyUsage.upsert({
         where: {
           task_id_supply_item_id: { task_id: id, supply_item_id: supplyItemId },
         },
@@ -400,7 +400,7 @@ router.patch("/:id/checklist", auth, async (c) => {
 
     staySupplies[supplyIndex].checked = checked;
 
-    const updated = await prisma.cleaningTask.update({
+    const updated = await prisma.task.update({
       where: { id },
       data: {
         checklist_data: serializeChecklistData(areas, staySupplies, isObject) as Prisma.InputJsonValue,
@@ -436,7 +436,7 @@ router.patch("/:id/checklist", auth, async (c) => {
     subTasks[stIndex].completed = completed;
     areas[itemIndex].subTasks = subTasks;
 
-    const updated = await prisma.cleaningTask.update({
+    const updated = await prisma.task.update({
       where: { id },
       data: {
         checklist_data: serializeChecklistData(areas, staySupplies, isObject) as Prisma.InputJsonValue,
@@ -462,7 +462,7 @@ router.patch("/:id/checklist", auth, async (c) => {
   if (typeof completed === "boolean") areas[itemIndex].completed = completed;
   if (typeof notes === "string") areas[itemIndex].notes = notes;
 
-  const updated = await prisma.cleaningTask.update({
+  const updated = await prisma.task.update({
     where: { id },
     data: {
       checklist_data: serializeChecklistData(areas, staySupplies, isObject) as Prisma.InputJsonValue,
@@ -481,14 +481,14 @@ router.patch("/:id/review", auth, requireManager, async (c) => {
     return c.json({ error: parsed.error.issues[0].message }, 400);
   }
 
-  const task = await prisma.cleaningTask.findUnique({ where: { id } });
+  const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return c.json({ error: "Task non trovata" }, 404);
   if (task.status !== "COMPLETED") {
     return c.json({ ...task, alreadyApplied: true });
   }
 
   const updatedTask = await prisma.$transaction(async (tx) => {
-    const updated = await tx.cleaningTask.update({
+    const updated = await tx.task.update({
       where: { id },
       data: {
         status: parsed.data.status,
@@ -523,7 +523,7 @@ router.patch("/:id/reopen", auth, requireManager, async (c) => {
     return c.json({ error: parsed.error.issues[0].message }, 400);
   }
 
-  const { count } = await prisma.cleaningTask.updateMany({
+  const { count } = await prisma.task.updateMany({
     where: { id, status: "REJECTED" },
     data: {
       status: "IN_PROGRESS",
@@ -537,7 +537,7 @@ router.patch("/:id/reopen", auth, requireManager, async (c) => {
   });
 
   if (count === 0) {
-    const task = await prisma.cleaningTask.findUnique({ where: { id } });
+    const task = await prisma.task.findUnique({ where: { id } });
     if (!task) return c.json({ error: "Task non trovata" }, 404);
     if (task.status === "IN_PROGRESS") {
       return c.json({ ...task, alreadyApplied: true });
@@ -550,7 +550,7 @@ router.patch("/:id/reopen", auth, requireManager, async (c) => {
     );
   }
 
-  const updatedTask = await prisma.cleaningTask.findUnique({
+  const updatedTask = await prisma.task.findUnique({
     where: { id },
     include: {
       property: { select: { id: true, name: true, code: true } },
@@ -575,7 +575,7 @@ router.post("/:id/photos", auth, async (c) => {
     return c.json({ error: "checklistItemIndex e photoUrl sono richiesti" }, 400);
   }
 
-  const task = await prisma.cleaningTask.findUnique({ where: { id } });
+  const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return c.json({ error: "Task non trovato" }, 404);
   if (task.assigned_to !== userId) return c.json({ error: "Accesso negato" }, 403);
   if (task.status !== "IN_PROGRESS")
@@ -598,7 +598,7 @@ router.post("/:id/photos", auth, async (c) => {
       areas[checklistItemIndex].photo_urls = urls;
 
       const updatedData = isArray ? areas : raw;
-      await prisma.cleaningTask.update({
+      await prisma.task.update({
         where: { id },
         data: { checklist_data: updatedData as Prisma.InputJsonValue },
       });
@@ -611,7 +611,7 @@ router.post("/:id/photos", auth, async (c) => {
 // GET /api/tasks/:id/supply-usage
 router.get("/:id/supply-usage", auth, async (c) => {
   const id = c.req.param("id");
-  const usages = await prisma.cleaningTaskSupplyUsage.findMany({
+  const usages = await prisma.taskSupplyUsage.findMany({
     where: { task_id: id },
     include: { supply_item: { select: { name: true, unit: true } } },
     orderBy: { created_at: "asc" },
@@ -630,7 +630,7 @@ router.patch("/:id/supply-usage", auth, async (c) => {
 
   const { supply_item_id, qty_used } = parsed.data;
 
-  const usage = await prisma.cleaningTaskSupplyUsage.upsert({
+  const usage = await prisma.taskSupplyUsage.upsert({
     where: {
       task_id_supply_item_id: { task_id: id, supply_item_id },
     },

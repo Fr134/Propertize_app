@@ -16,19 +16,19 @@ router.patch("/", auth, async (c) => {
 
   const results = [];
   for (const supply of parsed.data.supplies) {
-    const result = await prisma.supplyLevel.upsert({
+    const result = await prisma.propertySupplyStock.upsert({
       where: {
-        property_id_category: {
+        property_id_supply_item_id: {
           property_id: parsed.data.property_id,
-          category: supply.category,
+          supply_item_id: supply.category,
         },
       },
-      update: { level: supply.level, task_id: parsed.data.task_id },
+      update: { qty_current: supply.level === "OK" ? 1 : 0, updated_by_task: parsed.data.task_id },
       create: {
         property_id: parsed.data.property_id,
-        category: supply.category,
-        level: supply.level,
-        task_id: parsed.data.task_id,
+        supply_item_id: supply.category,
+        qty_current: supply.level === "OK" ? 1 : 0,
+        updated_by_task: parsed.data.task_id,
       },
     });
     results.push(result);
@@ -39,11 +39,15 @@ router.patch("/", auth, async (c) => {
 
 // GET /api/supplies/low
 router.get("/low", auth, requireManager, async (c) => {
-  const lowSupplies = await prisma.supplyLevel.findMany({
-    where: { level: { in: ["IN_ESAURIMENTO", "ESAURITO"] } },
-    include: { property: { select: { id: true, name: true, code: true } } },
-    orderBy: [{ level: "asc" }, { category: "asc" }],
-  });
+  const lowSupplies = await prisma.$queryRaw<
+    { id: string; property_id: string; supply_item_id: string; qty_current: number; low_threshold: number; property_name: string; property_code: string }[]
+  >`
+    SELECT pss.*, p.name as property_name, p.code as property_code
+    FROM property_supply_stocks pss
+    JOIN properties p ON p.id = pss.property_id
+    WHERE pss.qty_current <= pss.low_threshold
+    ORDER BY p.name ASC
+  `;
 
   return c.json(lowSupplies);
 });
