@@ -6,7 +6,6 @@ import { useMasterfile, useUpdateMasterfile } from "@/hooks/use-masterfile";
 import type { ApplianceItem, CustomerCareQAItem, DocumentItem, RequiredPhotoItem } from "@/hooks/use-masterfile";
 import { usePropertyOperational } from "@/hooks/use-masterfile";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   MapPin,
@@ -68,13 +67,7 @@ const DEFAULT_PHOTOS: RequiredPhotoItem[] = [
   { label: "Stato generale stanze" },
 ];
 
-const CRITICAL_FIELDS = [
-  "wifi_ssid", "wifi_password", "lockbox_code", "access_type",
-  "electricity_panel_location", "supplier_plumber_name",
-  "building_entry_name", "maps_link", "heating_type",
-];
-
-export default function MasterfilePage({
+export default function OperatorMasterfilePage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -101,17 +94,6 @@ export default function MasterfilePage({
   if (isLoading) {
     return <p className="text-sm text-muted-foreground py-8 text-center">Caricamento...</p>;
   }
-
-  const completionPct = masterfile
-    ? Math.round(
-        (CRITICAL_FIELDS.filter((f) => {
-          const val = masterfile[f as keyof typeof masterfile];
-          return val != null && val !== "";
-        }).length /
-          CRITICAL_FIELDS.length) *
-          100
-      )
-    : 0;
 
   const appliances: ApplianceItem[] = masterfile?.appliances ??
     DEFAULT_APPLIANCE_TYPES.map((type) => ({ type }));
@@ -161,7 +143,7 @@ export default function MasterfilePage({
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
-          <Link href={`/manager/properties/${propertyId}`}>
+          <Link href="/operator">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -173,9 +155,6 @@ export default function MasterfilePage({
             </p>
           )}
         </div>
-        <Badge variant={completionPct === 100 ? "default" : "secondary"}>
-          Completamento: {completionPct}%
-        </Badge>
         {mf?.updated_at && (
           <span className="text-xs text-muted-foreground">
             Aggiornato: {new Date(mf.updated_at).toLocaleDateString("it-IT")}
@@ -183,12 +162,9 @@ export default function MasterfilePage({
         )}
       </div>
 
-      {/* Section 1 — General Info */}
-      <MasterfileSection
-        title="1. Informazioni Generali"
-        icon={<MapPin className="h-4 w-4" />}
-        storageKey={`${propertyId}-general`}
-      >
+      {/* All 13 sections — same as manager but no completion %, masked fields by default */}
+
+      <MasterfileSection title="1. Informazioni Generali" icon={<MapPin className="h-4 w-4" />} storageKey={`op-${propertyId}-general`}>
         <div className="grid md:grid-cols-2 gap-x-6">
           <MasterfileField label="Coordinate Google Maps" value={mf?.maps_coordinates} fieldName="maps_coordinates" onSave={saveField} />
           <div className="flex items-end gap-2">
@@ -211,14 +187,9 @@ export default function MasterfilePage({
         </div>
       </MasterfileSection>
 
-      {/* Section 2 — Access */}
-      <MasterfileSection
-        title="2. Accessi & Check-in"
-        icon={<Key className="h-4 w-4" />}
-        storageKey={`${propertyId}-access`}
-      >
+      <MasterfileSection title="2. Accessi & Check-in" icon={<Key className="h-4 w-4" />} storageKey={`op-${propertyId}-access`}>
         <div className="grid md:grid-cols-2 gap-x-6">
-          <MasterfileField label="Tipo accesso" value={mf?.access_type} fieldName="access_type" onSave={saveField} placeholder="self_checkin / concierge / manual" />
+          <MasterfileField label="Tipo accesso" value={mf?.access_type} fieldName="access_type" onSave={saveField} />
           <MasterfileField label="Posizione lockbox" value={mf?.lockbox_position} fieldName="lockbox_position" onSave={saveField} />
           <MasterfileField label="Codice lockbox" value={mf?.lockbox_code} fieldName="lockbox_code" masked onSave={saveField} />
           <MasterfilePhotoField label="Foto lockbox" photoUrl={mf?.lockbox_photo_url} fieldName="lockbox_photo_url" onSave={saveField} />
@@ -229,84 +200,42 @@ export default function MasterfilePage({
         </div>
       </MasterfileSection>
 
-      {/* Section 3 — Utilities */}
-      <MasterfileSection
-        title="3. Contatori & Impianti"
-        icon={<Zap className="h-4 w-4" />}
-        storageKey={`${propertyId}-utilities`}
-      >
+      <MasterfileSection title="3. Contatori & Impianti" icon={<Zap className="h-4 w-4" />} storageKey={`op-${propertyId}-utilities`}>
         <h4 className="font-medium text-sm mb-2 mt-1">Elettricità</h4>
         <div className="grid md:grid-cols-2 gap-x-6">
           <MasterfileField label="Posizione contatore" value={mf?.electricity_meter_location} fieldName="electricity_meter_location" onSave={saveField} />
-          <MasterfilePhotoField label="Foto contatore" photoUrl={mf?.electricity_meter_photo_url} fieldName="electricity_meter_photo_url" onSave={saveField} />
           <MasterfileField label="Posizione quadro elettrico" value={mf?.electricity_panel_location} fieldName="electricity_panel_location" onSave={saveField} />
-          <MasterfilePhotoField label="Foto quadro" photoUrl={mf?.electricity_panel_photo_url} fieldName="electricity_panel_photo_url" onSave={saveField} />
-          <MasterfileField label="Potenza (kW)" value={mf?.electricity_power_kw} fieldName="electricity_power_kw" type="number" onSave={saveField} />
-          <MasterfileField label="Fornitore" value={mf?.electricity_provider} fieldName="electricity_provider" onSave={saveField} />
-          <MasterfileField label="Numero cliente" value={mf?.electricity_client_number} fieldName="electricity_client_number" onSave={saveField} />
           <MasterfileField label="Procedura reset salvavita" value={mf?.electricity_reset_procedure} fieldName="electricity_reset_procedure" type="textarea" onSave={saveField} />
         </div>
-
         <h4 className="font-medium text-sm mb-2 mt-6">Gas</h4>
         <div className="grid md:grid-cols-2 gap-x-6">
           <MasterfileField label="Posizione contatore gas" value={mf?.gas_meter_location_detail} fieldName="gas_meter_location_detail" onSave={saveField} />
-          <MasterfilePhotoField label="Foto contatore gas" photoUrl={mf?.gas_meter_photo_url} fieldName="gas_meter_photo_url" onSave={saveField} />
           <MasterfileField label="Posizione valvola gas" value={mf?.gas_valve_location} fieldName="gas_valve_location" onSave={saveField} />
-          <MasterfileField label="Fornitore gas" value={mf?.gas_provider} fieldName="gas_provider" onSave={saveField} />
-          <MasterfileField label="Numero cliente gas" value={mf?.gas_client_number} fieldName="gas_client_number" onSave={saveField} />
           <MasterfileField label="Contatto emergenza gas" value={mf?.gas_emergency_contact} fieldName="gas_emergency_contact" onSave={saveField} />
         </div>
-
         <h4 className="font-medium text-sm mb-2 mt-6">Acqua</h4>
         <div className="grid md:grid-cols-2 gap-x-6">
           <MasterfileField label="Posizione contatore acqua" value={mf?.water_meter_location} fieldName="water_meter_location" onSave={saveField} />
-          <MasterfilePhotoField label="Foto contatore acqua" photoUrl={mf?.water_meter_photo_url} fieldName="water_meter_photo_url" onSave={saveField} />
           <MasterfileField label="Posizione rubinetto chiusura" value={mf?.water_shutoff_location} fieldName="water_shutoff_location" onSave={saveField} />
-          <MasterfileField label="Autoclave presente" value={mf?.water_autoclave} fieldName="water_autoclave" type="boolean" onSave={saveField} />
-          {mf?.water_autoclave && (
-            <MasterfileField label="Posizione autoclave" value={mf?.water_autoclave_location} fieldName="water_autoclave_location" onSave={saveField} />
-          )}
           <MasterfileField label="Amministratore condominio" value={mf?.condo_manager_name} fieldName="condo_manager_name" onSave={saveField} />
           <MasterfileField label="Telefono amministratore" value={mf?.condo_manager_phone} fieldName="condo_manager_phone" onSave={saveField} />
         </div>
       </MasterfileSection>
 
-      {/* Section 4 — WiFi */}
-      <MasterfileSection
-        title="4. WiFi & Connettività"
-        icon={<Wifi className="h-4 w-4" />}
-        storageKey={`${propertyId}-wifi`}
-      >
+      <MasterfileSection title="4. WiFi & Connettività" icon={<Wifi className="h-4 w-4" />} storageKey={`op-${propertyId}-wifi`}>
         <div className="grid md:grid-cols-2 gap-x-6">
-          <MasterfileField label="Fornitore" value={mf?.wifi_provider} fieldName="wifi_provider" onSave={saveField} />
-          <MasterfileField label="Numero contratto" value={mf?.wifi_contract_number} fieldName="wifi_contract_number" onSave={saveField} />
-          <MasterfileField label="Seriale modem" value={mf?.wifi_modem_serial} fieldName="wifi_modem_serial" onSave={saveField} />
-          <MasterfileField label="Tipo linea" value={mf?.wifi_line_type} fieldName="wifi_line_type" onSave={saveField} placeholder="fiber / adsl / 4g / 5g" />
-          <MasterfileField label="Numero SIM (se 4G/5G)" value={mf?.wifi_sim_number} fieldName="wifi_sim_number" onSave={saveField} />
           <MasterfileField label="SSID (nome rete)" value={mf?.wifi_ssid} fieldName="wifi_ssid" onSave={saveField} />
           <MasterfileField label="Password WiFi" value={mf?.wifi_password} fieldName="wifi_password" masked onSave={saveField} />
-          <MasterfilePhotoField label="Foto modem" photoUrl={mf?.wifi_modem_photo_url} fieldName="wifi_modem_photo_url" onSave={saveField} />
           <MasterfileField label="Posizione modem" value={mf?.wifi_modem_location} fieldName="wifi_modem_location" onSave={saveField} />
           <MasterfileField label="Procedura riavvio" value={mf?.wifi_restart_procedure} fieldName="wifi_restart_procedure" type="textarea" onSave={saveField} />
           <MasterfileField label="Numero assistenza" value={mf?.wifi_support_number} fieldName="wifi_support_number" onSave={saveField} />
         </div>
       </MasterfileSection>
 
-      {/* Section 5 — Appliances */}
-      <MasterfileSection
-        title="5. Elettrodomestici"
-        icon={<Refrigerator className="h-4 w-4" />}
-        storageKey={`${propertyId}-appliances`}
-      >
+      <MasterfileSection title="5. Elettrodomestici" icon={<Refrigerator className="h-4 w-4" />} storageKey={`op-${propertyId}-appliances`}>
         <div className="grid md:grid-cols-2 gap-3">
           {appliances.map((app, idx) => (
-            <ApplianceCard
-              key={idx}
-              appliance={app}
-              index={idx}
-              onSave={handleApplianceSave}
-              onDelete={handleApplianceDelete}
-            />
+            <ApplianceCard key={idx} appliance={app} index={idx} onSave={handleApplianceSave} onDelete={handleApplianceDelete} />
           ))}
         </div>
         <Button variant="outline" size="sm" className="mt-3" onClick={handleApplianceAdd}>
@@ -314,137 +243,65 @@ export default function MasterfilePage({
         </Button>
       </MasterfileSection>
 
-      {/* Section 6 — Heating */}
-      <MasterfileSection
-        title="6. Climatizzazione & Riscaldamento"
-        icon={<Thermometer className="h-4 w-4" />}
-        storageKey={`${propertyId}-heating`}
-      >
+      <MasterfileSection title="6. Climatizzazione & Riscaldamento" icon={<Thermometer className="h-4 w-4" />} storageKey={`op-${propertyId}-heating`}>
         <div className="grid md:grid-cols-2 gap-x-6">
-          <MasterfileField label="Tipo riscaldamento" value={mf?.heating_type} fieldName="heating_type" onSave={saveField} placeholder="autonomous / central" />
-          <MasterfileField label="Marca caldaia" value={mf?.boiler_brand} fieldName="boiler_brand" onSave={saveField} />
-          <MasterfileField label="Modello caldaia" value={mf?.boiler_model} fieldName="boiler_model" onSave={saveField} />
+          <MasterfileField label="Tipo riscaldamento" value={mf?.heating_type} fieldName="heating_type" onSave={saveField} />
           <MasterfileField label="Posizione caldaia" value={mf?.boiler_location} fieldName="boiler_location" onSave={saveField} />
-          <MasterfileField label="Ultima manutenzione" value={mf?.boiler_last_service ? mf.boiler_last_service.slice(0, 10) : null} fieldName="boiler_last_service" type="date" onSave={saveField} />
-          <MasterfileField label="Tecnico caldaia - nome" value={mf?.boiler_technician_name} fieldName="boiler_technician_name" onSave={saveField} />
-          <MasterfileField label="Tecnico caldaia - telefono" value={mf?.boiler_technician_phone} fieldName="boiler_technician_phone" onSave={saveField} />
           <MasterfileField label="Procedura reset caldaia" value={mf?.boiler_reset_procedure} fieldName="boiler_reset_procedure" type="textarea" onSave={saveField} />
-          <MasterfileField label="Modello termostato" value={mf?.thermostat_model} fieldName="thermostat_model" onSave={saveField} />
           <MasterfileField label="Posizione termostato" value={mf?.thermostat_location} fieldName="thermostat_location" onSave={saveField} />
           <MasterfileField label="Istruzioni AC per ospiti" value={mf?.ac_guest_instructions} fieldName="ac_guest_instructions" type="textarea" onSave={saveField} />
         </div>
       </MasterfileSection>
 
-      {/* Section 7 — Waste */}
-      <MasterfileSection
-        title="7. Rifiuti"
-        icon={<Trash2 className="h-4 w-4" />}
-        storageKey={`${propertyId}-waste`}
-      >
+      <MasterfileSection title="7. Rifiuti" icon={<Trash2 className="h-4 w-4" />} storageKey={`op-${propertyId}-waste`}>
         <div className="grid md:grid-cols-2 gap-x-6">
           <MasterfileField label="Tipo raccolta" value={wasteInfo.type ?? null} fieldName="type" onSave={async (_, v) => handleWasteField("type", v as string | null)} />
           <MasterfileField label="Calendario raccolta" value={wasteInfo.schedule ?? null} fieldName="schedule" onSave={async (_, v) => handleWasteField("schedule", v as string | null)} type="textarea" />
-          <MasterfileField label="Regole condominiali" value={wasteInfo.condo_rules ?? null} fieldName="condo_rules" onSave={async (_, v) => handleWasteField("condo_rules", v as string | null)} type="textarea" />
-          <MasterfileField label="Sanzioni" value={wasteInfo.sanctions ?? null} fieldName="sanctions" onSave={async (_, v) => handleWasteField("sanctions", v as string | null)} type="textarea" />
           <MasterfileField label="Istruzioni per ospiti" value={wasteInfo.guest_instructions ?? null} fieldName="guest_instructions" onSave={async (_, v) => handleWasteField("guest_instructions", v as string | null)} type="textarea" />
         </div>
       </MasterfileSection>
 
-      {/* Section 8 — Safety */}
-      <MasterfileSection
-        title="8. Sicurezza"
-        icon={<Shield className="h-4 w-4" />}
-        storageKey={`${propertyId}-safety`}
-      >
+      <MasterfileSection title="8. Sicurezza" icon={<Shield className="h-4 w-4" />} storageKey={`op-${propertyId}-safety`}>
         <div className="grid md:grid-cols-2 gap-x-6">
           <MasterfileField label="Posizione estintore" value={mf?.fire_extinguisher_location} fieldName="fire_extinguisher_location" onSave={saveField} />
-          <MasterfileField label="Scadenza estintore" value={mf?.fire_extinguisher_expiry ? mf.fire_extinguisher_expiry.slice(0, 10) : null} fieldName="fire_extinguisher_expiry" type="date" onSave={saveField} />
           <MasterfileField label="Posizione rilevatore fumo" value={mf?.smoke_detector_location} fieldName="smoke_detector_location" onSave={saveField} />
-          <MasterfileField label="Posizione rilevatore gas" value={mf?.gas_detector_location} fieldName="gas_detector_location" onSave={saveField} />
           <MasterfileField label="Posizione kit primo soccorso" value={mf?.first_aid_location} fieldName="first_aid_location" onSave={saveField} />
           <MasterfileField label="Numero emergenza condominio" value={mf?.condo_emergency_number} fieldName="condo_emergency_number" onSave={saveField} />
           <MasterfileField label="Uscite di emergenza" value={mf?.emergency_exits} fieldName="emergency_exits" type="textarea" onSave={saveField} />
-          <MasterfileField label="Tapparelle elettriche - manuale" value={mf?.electric_shutters_manual} fieldName="electric_shutters_manual" type="textarea" onSave={saveField} />
         </div>
       </MasterfileSection>
 
-      {/* Section 9 — Suppliers */}
-      <MasterfileSection
-        title="9. Manutenzione & Fornitori"
-        icon={<Wrench className="h-4 w-4" />}
-        storageKey={`${propertyId}-suppliers`}
-      >
+      <MasterfileSection title="9. Manutenzione & Fornitori" icon={<Wrench className="h-4 w-4" />} storageKey={`op-${propertyId}-suppliers`}>
         <div className="grid md:grid-cols-2 gap-x-6">
           <MasterfileField label="Idraulico - nome" value={mf?.supplier_plumber_name} fieldName="supplier_plumber_name" onSave={saveField} />
           <MasterfileField label="Idraulico - telefono" value={mf?.supplier_plumber_phone} fieldName="supplier_plumber_phone" onSave={saveField} />
           <MasterfileField label="Elettricista - nome" value={mf?.supplier_electrician_name} fieldName="supplier_electrician_name" onSave={saveField} />
           <MasterfileField label="Elettricista - telefono" value={mf?.supplier_electrician_phone} fieldName="supplier_electrician_phone" onSave={saveField} />
-          <MasterfileField label="Caldaista - nome" value={mf?.supplier_boiler_name} fieldName="supplier_boiler_name" onSave={saveField} />
-          <MasterfileField label="Caldaista - telefono" value={mf?.supplier_boiler_phone} fieldName="supplier_boiler_phone" onSave={saveField} />
-          <MasterfileField label="Fabbro - nome" value={mf?.supplier_locksmith_name} fieldName="supplier_locksmith_name" onSave={saveField} />
-          <MasterfileField label="Fabbro - telefono" value={mf?.supplier_locksmith_phone} fieldName="supplier_locksmith_phone" onSave={saveField} />
-          <MasterfileField label="Pulizie - nome" value={mf?.supplier_cleaning_name} fieldName="supplier_cleaning_name" onSave={saveField} />
-          <MasterfileField label="Pulizie - telefono" value={mf?.supplier_cleaning_phone} fieldName="supplier_cleaning_phone" onSave={saveField} />
           <MasterfileField label="Numero intervento generico" value={mf?.supplier_intervention_number} fieldName="supplier_intervention_number" onSave={saveField} />
         </div>
       </MasterfileSection>
 
-      {/* Section 10 — Inventory Info */}
-      <MasterfileSection
-        title="10. Inventario Casa"
-        icon={<Package className="h-4 w-4" />}
-        storageKey={`${propertyId}-inventory`}
-      >
+      <MasterfileSection title="10. Inventario Casa" icon={<Package className="h-4 w-4" />} storageKey={`op-${propertyId}-inventory`}>
         <div className="grid md:grid-cols-2 gap-x-6">
           <MasterfileField label="Set biancheria letto" value={inventoryInfo.linen_sets ?? null} fieldName="linen_sets" onSave={async (_, v) => handleInventoryInfoField("linen_sets", v as string | null)} />
           <MasterfileField label="Asciugamani" value={inventoryInfo.towels ?? null} fieldName="towels" onSave={async (_, v) => handleInventoryInfoField("towels", v as string | null)} />
-          <MasterfileField label="Cuscini extra" value={inventoryInfo.extra_pillows ?? null} fieldName="extra_pillows" onSave={async (_, v) => handleInventoryInfoField("extra_pillows", v as string | null)} />
-          <MasterfileField label="Coperte extra" value={inventoryInfo.extra_blankets ?? null} fieldName="extra_blankets" onSave={async (_, v) => handleInventoryInfoField("extra_blankets", v as string | null)} />
           <MasterfileField label="Posizione kit cortesia" value={inventoryInfo.courtesy_kit_location ?? null} fieldName="courtesy_kit_location" onSave={async (_, v) => handleInventoryInfoField("courtesy_kit_location", v as string | null)} />
-          <MasterfileField label="Oggetti di valore" value={inventoryInfo.valuables ?? null} fieldName="valuables" type="textarea" onSave={async (_, v) => handleInventoryInfoField("valuables", v as string | null)} />
           <MasterfileField label="Danni preesistenti" value={inventoryInfo.existing_damages ?? null} fieldName="existing_damages" type="textarea" onSave={async (_, v) => handleInventoryInfoField("existing_damages", v as string | null)} />
         </div>
       </MasterfileSection>
 
-      {/* Section 11 — Customer Care Q&A */}
-      <MasterfileSection
-        title="11. Customer Care Q&A"
-        icon={<HelpCircle className="h-4 w-4" />}
-        storageKey={`${propertyId}-qa`}
-      >
-        <CustomerCareQA
-          items={customerCareQa}
-          onSave={(items) => saveJson("customer_care_qa", items)}
-        />
+      <MasterfileSection title="11. Customer Care Q&A" icon={<HelpCircle className="h-4 w-4" />} storageKey={`op-${propertyId}-qa`}>
+        <CustomerCareQA items={customerCareQa} onSave={(items) => saveJson("customer_care_qa", items)} />
       </MasterfileSection>
 
-      {/* Section 12 — Documents */}
-      <MasterfileSection
-        title="12. Documenti Allegati"
-        icon={<FileText className="h-4 w-4" />}
-        storageKey={`${propertyId}-docs`}
-      >
-        <DocumentsList
-          items={documents}
-          onSave={(items) => saveJson("documents", items)}
-        />
+      <MasterfileSection title="12. Documenti Allegati" icon={<FileText className="h-4 w-4" />} storageKey={`op-${propertyId}-docs`}>
+        <DocumentsList items={documents} onSave={(items) => saveJson("documents", items)} />
       </MasterfileSection>
 
-      {/* Section 13 — Required Photos */}
-      <MasterfileSection
-        title="13. Foto Obbligatorie Checklist"
-        icon={<Camera className="h-4 w-4" />}
-        storageKey={`${propertyId}-photos`}
-      >
+      <MasterfileSection title="13. Foto Obbligatorie Checklist" icon={<Camera className="h-4 w-4" />} storageKey={`op-${propertyId}-photos`}>
         <div className="grid md:grid-cols-3 gap-4">
           {requiredPhotos.map((photo, idx) => (
-            <MasterfilePhotoField
-              key={idx}
-              label={photo.label}
-              photoUrl={photo.photo_url || null}
-              fieldName={`required_photo_${idx}`}
-              onSave={async (_, url) => handlePhotoSave(idx, url as string | null)}
-            />
+            <MasterfilePhotoField key={idx} label={photo.label} photoUrl={photo.photo_url || null} fieldName={`required_photo_${idx}`} onSave={async (_, url) => handlePhotoSave(idx, url as string | null)} />
           ))}
         </div>
       </MasterfileSection>

@@ -255,6 +255,8 @@ model ChecklistTemplate {
 model PropertyMasterFile {
   id                String   @id @default(uuid()) @db.Uuid
   property_id       String   @unique @db.Uuid
+
+  // Legacy fields (kept for backward compat)
   plumber_name      String?
   plumber_phone     String?
   electrician_name  String?
@@ -268,7 +270,112 @@ model PropertyMasterFile {
   floorplan_url     String?
   additional_photos Json?
   drive_folder_url  String?
-  updated_at        DateTime @updatedAt
+
+  // Section 1 — General info
+  maps_coordinates       String?
+  maps_link              String?
+  building_entry_name    String?
+  building_directions    String?
+  parking_info           String?
+  ztl_zone               Boolean?
+  ztl_details            String?
+
+  // Section 2 — Access
+  access_type                String?
+  lockbox_position           String?
+  lockbox_code               String?
+  lockbox_photo_url          String?
+  smart_lock_model           String?
+  spare_keys_location        String?
+  door_blocked_procedure     String?
+  access_emergency_contact   String?
+
+  // Section 3 — Utilities: electricity
+  electricity_meter_location  String?
+  electricity_meter_photo_url String?
+  electricity_panel_location  String?
+  electricity_panel_photo_url String?
+  electricity_power_kw        Float?
+  electricity_provider        String?
+  electricity_client_number   String?
+  electricity_reset_procedure String?
+
+  // Section 3 — Utilities: gas
+  gas_meter_location_detail String?
+  gas_meter_photo_url       String?
+  gas_valve_location        String?
+  gas_provider              String?
+  gas_client_number         String?
+  gas_emergency_contact     String?
+
+  // Section 3 — Utilities: water
+  water_meter_location       String?
+  water_meter_photo_url      String?
+  water_shutoff_location     String?
+  water_autoclave            Boolean?
+  water_autoclave_location   String?
+  condo_manager_name         String?
+  condo_manager_phone        String?
+
+  // Section 4 — WiFi
+  wifi_provider          String?
+  wifi_contract_number   String?
+  wifi_modem_serial      String?
+  wifi_line_type         String?
+  wifi_sim_number        String?
+  wifi_ssid              String?
+  wifi_password          String?
+  wifi_modem_photo_url   String?
+  wifi_modem_location    String?
+  wifi_restart_procedure String?
+  wifi_support_number    String?
+
+  // Section 6 — Heating
+  heating_type               String?
+  boiler_brand               String?
+  boiler_model               String?
+  boiler_location            String?
+  boiler_last_service        DateTime?
+  boiler_technician_name     String?
+  boiler_technician_phone    String?
+  boiler_reset_procedure     String?
+  thermostat_model           String?
+  thermostat_location        String?
+  ac_guest_instructions      String?
+
+  // Section 8 — Safety
+  fire_extinguisher_location String?
+  fire_extinguisher_expiry   DateTime?
+  smoke_detector_location    String?
+  gas_detector_location      String?
+  first_aid_location         String?
+  condo_emergency_number     String?
+  emergency_exits            String?
+  electric_shutters_manual   String?
+
+  // Section 9 — Suppliers
+  supplier_plumber_name          String?
+  supplier_plumber_phone         String?
+  supplier_electrician_name      String?
+  supplier_electrician_phone     String?
+  supplier_boiler_name           String?
+  supplier_boiler_phone          String?
+  supplier_locksmith_name        String?
+  supplier_locksmith_phone       String?
+  supplier_cleaning_name         String?
+  supplier_cleaning_phone        String?
+  supplier_intervention_number   String?
+
+  // JSONB columns
+  appliances        Json?  // [{ type, brand, model, serial, photo_url, purchase_year, warranty_expiry, manual_url, notes }]
+  waste_info        Json?  // { type, schedule, area_photo_url, condo_rules, sanctions, guest_instructions }
+  inventory_info    Json?  // { linen_sets, towels, extra_pillows, extra_blankets, courtesy_kit_location, valuables, wall_condition_photos, floor_condition_photos, existing_damages }
+  customer_care_qa  Json?  // [{ question, answer }]
+  documents         Json?  // [{ label, file_url, uploaded_at }]
+  required_photos   Json?  // [{ label, photo_url, uploaded_at }]
+  ac_remotes_photos Json?  // [{ label, photo_url }]
+
+  updated_at DateTime @updatedAt
 
   property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
 

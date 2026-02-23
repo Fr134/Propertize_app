@@ -326,20 +326,162 @@ export type ReceivePurchaseOrderInput = z.infer<typeof receivePurchaseOrderSchem
 // Property Masterfile
 // ============================================
 
+const optStr = z.string().optional().or(z.literal(""));
+const optUrl = z.string().url().optional().or(z.literal(""));
+
+export const applianceSchema = z.object({
+  type: z.string().min(1, "Tipo obbligatorio"),
+  brand: z.string().optional().or(z.literal("")),
+  model: z.string().optional().or(z.literal("")),
+  serial: z.string().optional().or(z.literal("")),
+  photo_url: z.string().optional().or(z.literal("")),
+  purchase_year: z.number().int().optional().nullable(),
+  warranty_expiry: z.string().optional().or(z.literal("")),
+  manual_url: z.string().optional().or(z.literal("")),
+  notes: z.string().optional().or(z.literal("")),
+});
+
+export const customerCareQASchema = z.object({
+  question: z.string().min(1, "Domanda obbligatoria"),
+  answer: z.string().optional().or(z.literal("")),
+});
+
+export const documentEntrySchema = z.object({
+  label: z.string().min(1, "Etichetta obbligatoria"),
+  file_url: z.string().optional().or(z.literal("")),
+  uploaded_at: z.string().optional().or(z.literal("")),
+});
+
+export const requiredPhotoSchema = z.object({
+  label: z.string().min(1),
+  photo_url: z.string().optional().or(z.literal("")),
+  uploaded_at: z.string().optional().or(z.literal("")),
+});
+
+export const acRemotePhotoSchema = z.object({
+  label: z.string().optional().or(z.literal("")),
+  photo_url: z.string().optional().or(z.literal("")),
+});
+
 export const masterfileSchema = z.object({
-  plumber_name: z.string().optional().or(z.literal("")),
-  plumber_phone: z.string().optional().or(z.literal("")),
-  electrician_name: z.string().optional().or(z.literal("")),
-  electrician_phone: z.string().optional().or(z.literal("")),
-  cleaner_notes: z.string().optional().or(z.literal("")),
-  cadastral_id: z.string().optional().or(z.literal("")),
-  cie_code: z.string().optional().or(z.literal("")),
-  tourism_license: z.string().optional().or(z.literal("")),
+  // Legacy fields
+  plumber_name: optStr,
+  plumber_phone: optStr,
+  electrician_name: optStr,
+  electrician_phone: optStr,
+  cleaner_notes: optStr,
+  cadastral_id: optStr,
+  cie_code: optStr,
+  tourism_license: optStr,
   custom_fields: customFieldsSchema.optional(),
-  cover_photo_url: z.string().url().optional().or(z.literal("")),
-  floorplan_url: z.string().url().optional().or(z.literal("")),
+  cover_photo_url: optUrl,
+  floorplan_url: optUrl,
   additional_photos: z.array(masterFilePhotoSchema).optional(),
-  drive_folder_url: z.string().url().optional().or(z.literal("")),
+  drive_folder_url: optUrl,
+
+  // Section 1 — General info
+  maps_coordinates: optStr,
+  maps_link: optStr,
+  building_entry_name: optStr,
+  building_directions: optStr,
+  parking_info: optStr,
+  ztl_zone: z.boolean().optional().nullable(),
+  ztl_details: optStr,
+
+  // Section 2 — Access
+  access_type: optStr,
+  lockbox_position: optStr,
+  lockbox_code: optStr,
+  lockbox_photo_url: optStr,
+  smart_lock_model: optStr,
+  spare_keys_location: optStr,
+  door_blocked_procedure: optStr,
+  access_emergency_contact: optStr,
+
+  // Section 3 — Electricity
+  electricity_meter_location: optStr,
+  electricity_meter_photo_url: optStr,
+  electricity_panel_location: optStr,
+  electricity_panel_photo_url: optStr,
+  electricity_power_kw: z.number().optional().nullable(),
+  electricity_provider: optStr,
+  electricity_client_number: optStr,
+  electricity_reset_procedure: optStr,
+
+  // Section 3 — Gas
+  gas_meter_location_detail: optStr,
+  gas_meter_photo_url: optStr,
+  gas_valve_location: optStr,
+  gas_provider: optStr,
+  gas_client_number: optStr,
+  gas_emergency_contact: optStr,
+
+  // Section 3 — Water
+  water_meter_location: optStr,
+  water_meter_photo_url: optStr,
+  water_shutoff_location: optStr,
+  water_autoclave: z.boolean().optional().nullable(),
+  water_autoclave_location: optStr,
+  condo_manager_name: optStr,
+  condo_manager_phone: optStr,
+
+  // Section 4 — WiFi
+  wifi_provider: optStr,
+  wifi_contract_number: optStr,
+  wifi_modem_serial: optStr,
+  wifi_line_type: optStr,
+  wifi_sim_number: optStr,
+  wifi_ssid: optStr,
+  wifi_password: optStr,
+  wifi_modem_photo_url: optStr,
+  wifi_modem_location: optStr,
+  wifi_restart_procedure: optStr,
+  wifi_support_number: optStr,
+
+  // Section 6 — Heating
+  heating_type: optStr,
+  boiler_brand: optStr,
+  boiler_model: optStr,
+  boiler_location: optStr,
+  boiler_last_service: z.string().optional().or(z.literal("")),
+  boiler_technician_name: optStr,
+  boiler_technician_phone: optStr,
+  boiler_reset_procedure: optStr,
+  thermostat_model: optStr,
+  thermostat_location: optStr,
+  ac_guest_instructions: optStr,
+
+  // Section 8 — Safety
+  fire_extinguisher_location: optStr,
+  fire_extinguisher_expiry: z.string().optional().or(z.literal("")),
+  smoke_detector_location: optStr,
+  gas_detector_location: optStr,
+  first_aid_location: optStr,
+  condo_emergency_number: optStr,
+  emergency_exits: optStr,
+  electric_shutters_manual: optStr,
+
+  // Section 9 — Suppliers
+  supplier_plumber_name: optStr,
+  supplier_plumber_phone: optStr,
+  supplier_electrician_name: optStr,
+  supplier_electrician_phone: optStr,
+  supplier_boiler_name: optStr,
+  supplier_boiler_phone: optStr,
+  supplier_locksmith_name: optStr,
+  supplier_locksmith_phone: optStr,
+  supplier_cleaning_name: optStr,
+  supplier_cleaning_phone: optStr,
+  supplier_intervention_number: optStr,
+
+  // JSONB sections
+  appliances: z.array(applianceSchema).optional().nullable(),
+  waste_info: z.record(z.string(), z.unknown()).optional().nullable(),
+  inventory_info: z.record(z.string(), z.unknown()).optional().nullable(),
+  customer_care_qa: z.array(customerCareQASchema).optional().nullable(),
+  documents: z.array(documentEntrySchema).optional().nullable(),
+  required_photos: z.array(requiredPhotoSchema).optional().nullable(),
+  ac_remotes_photos: z.array(acRemotePhotoSchema).optional().nullable(),
 });
 
 export type MasterfileInput = z.infer<typeof masterfileSchema>;

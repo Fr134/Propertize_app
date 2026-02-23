@@ -122,8 +122,8 @@ router.post("/:propertyId", auth, requireManager, async (c) => {
   return c.json(masterfile, 201);
 });
 
-// PATCH /api/masterfile/:propertyId
-router.patch("/:propertyId", auth, requireManager, async (c) => {
+// PATCH /api/masterfile/:propertyId (both manager and operator)
+router.patch("/:propertyId", auth, async (c) => {
   const propertyId = c.req.param("propertyId");
 
   const property = await prisma.property.findUnique({ where: { id: propertyId } });
@@ -135,10 +135,14 @@ router.patch("/:propertyId", auth, requireManager, async (c) => {
     return c.json({ error: parsed.error.issues[0].message }, 400);
   }
 
-  // Convert empty strings to null
+  const DATE_FIELDS = ["boiler_last_service", "fire_extinguisher_expiry"];
+
+  // Convert empty strings to null, handle date fields
   const data: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(parsed.data)) {
-    if (typeof value === "string" && value === "") {
+    if (DATE_FIELDS.includes(key)) {
+      data[key] = value && value !== "" ? new Date(value as string) : null;
+    } else if (typeof value === "string" && value === "") {
       data[key] = null;
     } else {
       data[key] = value;
@@ -150,6 +154,30 @@ router.patch("/:propertyId", auth, requireManager, async (c) => {
     update: data,
     create: { property_id: propertyId, ...data },
   });
+
+  // Auto-complete onboarding step "masterfile_completed" if critical fields are filled
+  if (property.owner_id) {
+    const CRITICAL_FIELDS = ["wifi_ssid", "wifi_password", "lockbox_code", "access_type", "electricity_panel_location"];
+    const mf = masterfile as Record<string, unknown>;
+    const hasSupplier = !!(mf.supplier_plumber_name || mf.supplier_electrician_name || mf.supplier_cleaning_name);
+    const criticalFilled = CRITICAL_FIELDS.filter((f) => mf[f] != null && mf[f] !== "").length;
+    const isComplete = criticalFilled >= 3 && hasSupplier;
+
+    const workflow = await prisma.onboardingWorkflow.findUnique({
+      where: { owner_id: property.owner_id },
+    });
+    if (workflow) {
+      const step = await prisma.onboardingStep.findUnique({
+        where: { workflow_id_step_key: { workflow_id: workflow.id, step_key: "masterfile_completed" } },
+      });
+      if (step && step.status !== "COMPLETED" && step.status !== "SKIPPED" && isComplete) {
+        await prisma.onboardingStep.update({
+          where: { id: step.id },
+          data: { status: "COMPLETED", completed_at: new Date() },
+        });
+      }
+    }
+  }
 
   return c.json(masterfile);
 });
