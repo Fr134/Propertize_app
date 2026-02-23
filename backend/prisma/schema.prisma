@@ -121,6 +121,13 @@ enum AnalysisStatus {
   COMPLETED
 }
 
+enum OnboardingStepStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
 enum LeadStatus {
   NEW
   CONTACTED
@@ -177,8 +184,9 @@ model Owner {
   contract_signed_at DateTime?
   created_at         DateTime  @default(now())
 
-  properties Property[]
-  lead       Lead?
+  properties          Property[]
+  lead                Lead?
+  onboarding_workflow OnboardingWorkflow?
 
   @@map("owners")
 }
@@ -658,4 +666,40 @@ model PropertyAnalysis {
   lead Lead? @relation(fields: [lead_id], references: [id])
 
   @@map("property_analyses")
+}
+
+// ============================================
+// Onboarding
+// ============================================
+
+model OnboardingWorkflow {
+  id           String    @id @default(uuid()) @db.Uuid
+  owner_id     String    @unique @db.Uuid
+  started_at   DateTime  @default(now())
+  completed_at DateTime?
+  notes        String?
+  updated_at   DateTime  @updatedAt
+
+  owner Owner            @relation(fields: [owner_id], references: [id])
+  steps OnboardingStep[]
+
+  @@map("onboarding_workflows")
+}
+
+model OnboardingStep {
+  id           String               @id @default(uuid()) @db.Uuid
+  workflow_id  String               @db.Uuid
+  step_key     String
+  label        String
+  description  String?
+  status       OnboardingStepStatus @default(PENDING)
+  order        Int
+  completed_at DateTime?
+  notes        String?
+  updated_at   DateTime             @updatedAt
+
+  workflow OnboardingWorkflow @relation(fields: [workflow_id], references: [id], onDelete: Cascade)
+
+  @@unique([workflow_id, step_key])
+  @@map("onboarding_steps")
 }

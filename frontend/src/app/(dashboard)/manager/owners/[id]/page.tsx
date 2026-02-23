@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { updateOwnerSchema, type UpdateOwnerInput } from "@/lib/validators";
 import { useOwner, useUpdateOwner, useDeleteOwner } from "@/hooks/use-owners";
+import { useOnboarding, useStartOnboarding } from "@/hooks/use-onboarding";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Pencil, Trash2, Building2, X } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, Pencil, Trash2, Building2, X, ListChecks, ExternalLink, Plus } from "lucide-react";
 
 export default function OwnerDetailPage({
   params,
@@ -35,6 +37,8 @@ export default function OwnerDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const { data: owner, isLoading } = useOwner(id);
+  const { data: onboarding, isLoading: onbLoading } = useOnboarding(id);
+  const startOnboarding = useStartOnboarding();
   const updateOwner = useUpdateOwner();
   const deleteOwner = useDeleteOwner();
   const { toast } = useToast();
@@ -235,6 +239,116 @@ export default function OwnerDetailPage({
                     </Badge>
                   </Link>
                 ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        {/* Onboarding */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ListChecks className="h-4 w-4" />
+                Onboarding
+              </CardTitle>
+              {!onbLoading && !onboarding && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await startOnboarding.mutateAsync(id);
+                      toast({ title: "Onboarding avviato" });
+                    } catch (err) {
+                      toast({
+                        title: "Errore",
+                        description: err instanceof Error ? err.message : "Impossibile avviare",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  disabled={startOnboarding.isPending}
+                >
+                  <Plus className="mr-2 h-3 w-3" />
+                  Avvia onboarding
+                </Button>
+              )}
+              {onboarding && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/manager/crm/onboarding/${id}`}>
+                    <ExternalLink className="mr-2 h-3 w-3" />
+                    Dettaglio
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {onbLoading ? (
+              <p className="text-sm text-muted-foreground">Caricamento...</p>
+            ) : !onboarding ? (
+              <p className="text-sm text-muted-foreground">
+                Nessun onboarding avviato per questo proprietario.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Progress
+                    value={
+                      onboarding.steps.length > 0
+                        ? Math.round(
+                            (onboarding.steps.filter(
+                              (s) => s.status === "COMPLETED" || s.status === "SKIPPED"
+                            ).length /
+                              onboarding.steps.length) *
+                              100
+                          )
+                        : 0
+                    }
+                    className="h-2 flex-1"
+                  />
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">
+                    {onboarding.steps.filter(
+                      (s) => s.status === "COMPLETED" || s.status === "SKIPPED"
+                    ).length}
+                    /{onboarding.steps.length}
+                  </span>
+                </div>
+                <div className="grid gap-1.5">
+                  {onboarding.steps.map((step) => (
+                    <div
+                      key={step.id}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <div
+                        className={`h-2 w-2 rounded-full shrink-0 ${
+                          step.status === "COMPLETED"
+                            ? "bg-green-500"
+                            : step.status === "IN_PROGRESS"
+                              ? "bg-blue-500"
+                              : step.status === "SKIPPED"
+                                ? "bg-yellow-500"
+                                : "bg-gray-300"
+                        }`}
+                      />
+                      <span
+                        className={
+                          step.status === "COMPLETED" || step.status === "SKIPPED"
+                            ? "text-muted-foreground line-through"
+                            : ""
+                        }
+                      >
+                        {step.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {onboarding.completed_at && (
+                  <p className="text-xs text-green-600 font-medium">
+                    Completato il{" "}
+                    {new Date(onboarding.completed_at).toLocaleDateString("it-IT")}
+                  </p>
+                )}
               </div>
             )}
           </CardContent>

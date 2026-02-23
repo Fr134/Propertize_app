@@ -14,6 +14,7 @@ import {
   Users,
   ContactRound,
   TrendingUp,
+  ListChecks,
 } from "lucide-react";
 
 interface NavItem {
@@ -28,6 +29,7 @@ const managerNav: NavItem[] = [
   { label: "Proprietari", href: "/manager/owners", icon: Users },
   { label: "Contatti", href: "/manager/contacts", icon: ContactRound },
   { label: "CRM", href: "/manager/crm", icon: TrendingUp },
+  { label: "Onboarding", href: "/manager/crm/onboarding", icon: ListChecks },
   { label: "Task", href: "/manager/tasks", icon: ClipboardList },
   { label: "Segnalazioni", href: "/manager/reports", icon: AlertTriangle },
   { label: "Scorte", href: "/manager/supplies", icon: Package },

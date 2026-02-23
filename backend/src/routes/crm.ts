@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
 import { createLeadSchema, updateLeadSchema, createCallSchema } from "../lib/validators";
+import { DEFAULT_ONBOARDING_STEPS } from "../lib/onboarding-defaults";
 import type { AppEnv } from "../types";
 import type { LeadStatus } from "@prisma/client";
 
@@ -193,6 +194,21 @@ router.post("/leads/:id/convert", auth, requireManager, async (c) => {
         owner_id: owner.id,
         status: "WON",
         converted_at: new Date(),
+      },
+    });
+
+    // Auto-start onboarding workflow
+    await tx.onboardingWorkflow.create({
+      data: {
+        owner_id: owner.id,
+        steps: {
+          create: DEFAULT_ONBOARDING_STEPS.map((s) => ({
+            step_key: s.step_key,
+            label: s.label,
+            description: s.description,
+            order: s.order,
+          })),
+        },
       },
     });
 
