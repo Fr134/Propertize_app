@@ -9,7 +9,11 @@ import type { AnalysisStatus } from "@prisma/client";
 
 const router = new Hono<AppEnv>();
 
-const resend = new Resend(process.env.RESEND_API_KEY || "");
+function getResend(): Resend | null {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return null;
+  return new Resend(key);
+}
 const MANAGER_EMAIL = process.env.MANAGER_EMAIL || "";
 const FROM_EMAIL = process.env.FROM_EMAIL || "Propertize <onboarding@resend.dev>";
 
@@ -58,9 +62,10 @@ router.post("/submit", async (c) => {
   });
 
   // Send email notification to manager
-  if (MANAGER_EMAIL) {
+  const resendClient = getResend();
+  if (MANAGER_EMAIL && resendClient) {
     try {
-      await resend.emails.send({
+      await resendClient.emails.send({
         from: FROM_EMAIL,
         to: MANAGER_EMAIL,
         subject: `Nuova richiesta analisi — ${parsed.data.client_name} — ${parsed.data.property_address}`,
@@ -214,7 +219,8 @@ router.patch("/:id", auth, requireManager, async (c) => {
 
   // Send email to client when completing
   if (isCompleting) {
-    try {
+    const resendForClient = getResend();
+    if (resendForClient) try {
       const revenueText =
         updated.estimated_revenue_low && updated.estimated_revenue_high
           ? `€${Number(updated.estimated_revenue_low).toLocaleString("it-IT")} - €${Number(updated.estimated_revenue_high).toLocaleString("it-IT")}`
@@ -223,7 +229,7 @@ router.patch("/:id", auth, requireManager, async (c) => {
         ? `${updated.estimated_occupancy}%`
         : "Da definire";
 
-      await resend.emails.send({
+      await resendForClient.emails.send({
         from: FROM_EMAIL,
         to: updated.client_email,
         subject: "La tua analisi immobile è pronta — Propertize",
