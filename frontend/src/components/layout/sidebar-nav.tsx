@@ -13,6 +13,7 @@ import {
   Receipt,
   Users,
   ContactRound,
+  TrendingUp,
 } from "lucide-react";
 
 interface NavItem {
@@ -26,6 +27,7 @@ const managerNav: NavItem[] = [
   { label: "Immobili", href: "/manager/properties", icon: Building2 },
   { label: "Proprietari", href: "/manager/owners", icon: Users },
   { label: "Contatti", href: "/manager/contacts", icon: ContactRound },
+  { label: "CRM", href: "/manager/crm", icon: TrendingUp },
   { label: "Task", href: "/manager/tasks", icon: ClipboardList },
   { label: "Segnalazioni", href: "/manager/reports", icon: AlertTriangle },
   { label: "Scorte", href: "/manager/supplies", icon: Package },

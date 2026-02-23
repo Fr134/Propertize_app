@@ -382,3 +382,37 @@ export type CreateInventoryItemInput = z.infer<typeof createInventoryItemSchema>
 export const updateInventoryItemSchema = createInventoryItemSchema.partial();
 
 export type UpdateInventoryItemInput = z.infer<typeof updateInventoryItemSchema>;
+
+// ============================================
+// CRM: Lead
+// ============================================
+
+export const createLeadSchema = z.object({
+  first_name: z.string().min(1, "Nome obbligatorio"),
+  last_name: z.string().min(1, "Cognome obbligatorio"),
+  email: z.string().email("Email non valida").optional().or(z.literal("")),
+  phone: z.string().optional().or(z.literal("")),
+  notes: z.string().optional().or(z.literal("")),
+  status: z.enum(["NEW", "CONTACTED", "INTERESTED", "PROPOSAL_SENT", "NEGOTIATING", "WON", "LOST"]).default("NEW"),
+  source: z.enum(["MANUAL", "REFERRAL", "SOCIAL", "WEBSITE", "OTHER"]).default("MANUAL"),
+  property_address: z.string().optional().or(z.literal("")),
+  property_type: z.enum(["APPARTAMENTO", "VILLA", "ALTRO"]).optional(),
+  estimated_rooms: z.number().int().min(0).optional(),
+});
+
+export type CreateLeadInput = z.input<typeof createLeadSchema>;
+
+export const updateLeadSchema = createLeadSchema.partial();
+
+export type UpdateLeadInput = z.infer<typeof updateLeadSchema>;
+
+// ============================================
+// CRM: Call
+// ============================================
+
+export const createCallSchema = z.object({
+  notes: z.string().min(1, "Note chiamata obbligatorie"),
+  called_at: z.string().optional(),
+});
+
+export type CreateCallInput = z.infer<typeof createCallSchema>;

@@ -18,6 +18,7 @@ import expensesRoutes from "./routes/expenses";
 import masterfileRoutes from "./routes/masterfile";
 import externalContactsRoutes from "./routes/external-contacts";
 import checklistTemplatesRoutes from "./routes/checklist-templates";
+import crmRoutes from "./routes/crm";
 
 const app = new Hono<AppEnv>();
 
@@ -49,6 +50,7 @@ api.route("/expenses", expensesRoutes);
 api.route("/masterfile", masterfileRoutes);
 api.route("/external-contacts", externalContactsRoutes);
 api.route("/properties", checklistTemplatesRoutes);
+api.route("/crm", crmRoutes);
 
 app.route("/api", api);
 

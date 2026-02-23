@@ -110,6 +110,24 @@ export enum PurchaseOrderStatus {
   CANCELLED = "CANCELLED",
 }
 
+export enum LeadStatus {
+  NEW = "NEW",
+  CONTACTED = "CONTACTED",
+  INTERESTED = "INTERESTED",
+  PROPOSAL_SENT = "PROPOSAL_SENT",
+  NEGOTIATING = "NEGOTIATING",
+  WON = "WON",
+  LOST = "LOST",
+}
+
+export enum LeadSource {
+  MANUAL = "MANUAL",
+  REFERRAL = "REFERRAL",
+  SOCIAL = "SOCIAL",
+  WEBSITE = "WEBSITE",
+  OTHER = "OTHER",
+}
+
 // --- Owner ---
 
 export interface Owner {
