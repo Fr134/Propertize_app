@@ -17,6 +17,10 @@ export function setAuthToken(token: string | null) {
   _authToken = token;
 }
 
+export function getAuthToken(): string | null {
+  return _authToken;
+}
+
 export async function fetchJson<T>(path: string, options?: RequestInit): Promise<T> {
   // Prepend backend base URL for relative API paths
   const base =

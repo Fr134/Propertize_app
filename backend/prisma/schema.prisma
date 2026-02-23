@@ -115,6 +115,12 @@ enum PurchaseOrderStatus {
   CANCELLED
 }
 
+enum AnalysisStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
 enum LeadStatus {
   NEW
   CONTACTED
@@ -597,8 +603,9 @@ model Lead {
   converted_at     DateTime?
   owner_id         String?       @unique @db.Uuid
 
-  owner Owner? @relation(fields: [owner_id], references: [id])
-  calls Call[]
+  owner    Owner?              @relation(fields: [owner_id], references: [id])
+  calls    Call[]
+  analyses PropertyAnalysis[]
 
   @@map("leads")
 }
@@ -613,4 +620,42 @@ model Call {
   lead Lead @relation(fields: [lead_id], references: [id], onDelete: Cascade)
 
   @@map("calls")
+}
+
+model PropertyAnalysis {
+  id              String         @id @default(uuid()) @db.Uuid
+  lead_id         String?        @db.Uuid
+  // Client submitted data
+  client_name     String
+  client_email    String
+  client_phone    String?
+  // Property data
+  property_address    String
+  property_type       PropertyType
+  bedroom_count       Int
+  bathroom_count      Int
+  floor_area_sqm      Float?
+  has_pool            Boolean    @default(false)
+  has_parking         Boolean    @default(false)
+  has_terrace         Boolean    @default(false)
+  current_use         String?
+  availability_notes  String?
+  additional_notes    String?
+  // Manager analysis
+  estimated_revenue_low   Decimal? @db.Decimal(10,2)
+  estimated_revenue_high  Decimal? @db.Decimal(10,2)
+  estimated_occupancy     Int?
+  propertize_fee          Decimal? @db.Decimal(5,2)
+  analysis_notes          String?
+  analysis_file_url       String?
+  // Status and tracking
+  status          AnalysisStatus @default(PENDING)
+  submitted_at    DateTime       @default(now())
+  completed_at    DateTime?
+  sent_at         DateTime?
+  token           String         @unique @default(uuid())
+  // Relations
+  lead Lead? @relation(fields: [lead_id], references: [id])
+
+  @@map("property_analyses")
 }

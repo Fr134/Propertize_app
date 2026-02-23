@@ -32,9 +32,19 @@ interface CallItem {
   created_by: string;
 }
 
+interface LeadAnalysisItem {
+  id: string;
+  client_name: string;
+  property_address: string;
+  status: string;
+  submitted_at: string;
+  sent_at: string | null;
+}
+
 interface LeadDetail extends Omit<LeadListItem, "_count"> {
   calls: CallItem[];
   owner: { id: string; name: string } | null;
+  analyses: LeadAnalysisItem[];
 }
 
 // --- Hooks ---
@@ -129,4 +139,4 @@ export function useConvertLead(id: string) {
   });
 }
 
-export type { LeadListItem, LeadDetail, CallItem };
+export type { LeadListItem, LeadDetail, CallItem, LeadAnalysisItem };

@@ -23,7 +23,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
+import Link from "next/link";
 import { fetchJson } from "@/lib/fetch";
 import { useLeads, type LeadListItem } from "@/hooks/use-leads";
 import { KanbanColumn } from "@/components/manager/crm/kanban-column";
@@ -110,10 +111,18 @@ export default function CrmPage() {
             Gestisci i lead e il processo di acquisizione proprietari
           </p>
         </div>
-        <Button onClick={() => setSheetOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuovo lead
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/manager/crm/analisi">
+              <FileText className="mr-2 h-4 w-4" />
+              Analisi
+            </Link>
+          </Button>
+          <Button onClick={() => setSheetOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuovo lead
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-3 overflow-x-auto pb-4">

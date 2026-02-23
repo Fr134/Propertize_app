@@ -416,3 +416,38 @@ export const createCallSchema = z.object({
 });
 
 export type CreateCallInput = z.infer<typeof createCallSchema>;
+
+// ============================================
+// CRM: Property Analysis
+// ============================================
+
+export const submitAnalysisSchema = z.object({
+  client_name: z.string().min(1, "Nome obbligatorio"),
+  client_email: z.string().email("Email non valida"),
+  client_phone: z.string().optional().or(z.literal("")),
+  property_address: z.string().min(1, "Indirizzo obbligatorio"),
+  property_type: z.enum(["APPARTAMENTO", "VILLA", "ALTRO"]),
+  bedroom_count: z.number().int().min(0, "Numero camere non valido"),
+  bathroom_count: z.number().int().min(0, "Numero bagni non valido"),
+  floor_area_sqm: z.number().positive().optional(),
+  has_pool: z.boolean().default(false),
+  has_parking: z.boolean().default(false),
+  has_terrace: z.boolean().default(false),
+  current_use: z.string().optional().or(z.literal("")),
+  availability_notes: z.string().optional().or(z.literal("")),
+  additional_notes: z.string().optional().or(z.literal("")),
+});
+
+export type SubmitAnalysisInput = z.input<typeof submitAnalysisSchema>;
+
+export const updateAnalysisSchema = z.object({
+  estimated_revenue_low: z.number().min(0).optional(),
+  estimated_revenue_high: z.number().min(0).optional(),
+  estimated_occupancy: z.number().int().min(0).max(100, "Occupancy massima 100%").optional(),
+  propertize_fee: z.number().min(0).max(100).optional(),
+  analysis_notes: z.string().optional().or(z.literal("")),
+  analysis_file_url: z.string().optional().or(z.literal("")),
+  status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED"]).optional(),
+});
+
+export type UpdateAnalysisInput = z.input<typeof updateAnalysisSchema>;

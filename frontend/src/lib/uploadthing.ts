@@ -42,6 +42,18 @@ export const ourFileRouter = {
     .onUploadComplete(async ({ metadata, file }) => {
       return { url: file.ufsUrl, uploadedBy: metadata.userId };
     }),
+
+  analysisFile: f({ pdf: { maxFileSize: "8MB", maxFileCount: 1 }, image: { maxFileSize: "8MB", maxFileCount: 1 } })
+    .middleware(async () => {
+      const { userId, role } = await requireSession();
+      if (role !== "MANAGER") {
+        throw new UploadThingError("Accesso riservato al manager");
+      }
+      return { userId, role };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      return { url: file.ufsUrl, uploadedBy: metadata.userId };
+    }),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;

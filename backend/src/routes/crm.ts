@@ -64,6 +64,17 @@ router.get("/leads/:id", auth, async (c) => {
     include: {
       calls: { orderBy: { called_at: "desc" } },
       owner: { select: { id: true, name: true } },
+      analyses: {
+        orderBy: { submitted_at: "desc" },
+        select: {
+          id: true,
+          client_name: true,
+          property_address: true,
+          status: true,
+          submitted_at: true,
+          sent_at: true,
+        },
+      },
     },
   });
 

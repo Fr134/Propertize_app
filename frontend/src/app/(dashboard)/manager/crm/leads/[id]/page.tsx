@@ -36,7 +36,11 @@ import {
   XCircle,
   PhoneCall,
   ExternalLink,
+  FileText,
+  Copy,
+  Eye,
 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import {
   useLead,
   useUpdateLead,
@@ -57,6 +61,7 @@ export default function LeadDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { toast } = useToast();
   const { data: lead, isLoading } = useLead(id);
   const updateLead = useUpdateLead(id);
   const createCall = useCreateCall(id);
@@ -146,6 +151,28 @@ export default function LeadDetailPage({
     } catch {
       // error via mutation state
     }
+  }
+
+  const ANALYSIS_STATUS_LABELS: Record<string, string> = {
+    PENDING: "In attesa",
+    IN_PROGRESS: "In lavorazione",
+    COMPLETED: "Completata",
+  };
+
+  const ANALYSIS_STATUS_COLORS: Record<string, string> = {
+    PENDING: "bg-yellow-100 text-yellow-800",
+    IN_PROGRESS: "bg-blue-100 text-blue-800",
+    COMPLETED: "bg-green-100 text-green-800",
+  };
+
+  function handleCopyAnalysisLink() {
+    const base = typeof window !== "undefined" ? window.location.origin : "";
+    const url = `${base}/analisi?lead_id=${id}`;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link copiato",
+      description: "Il link del modulo analisi è stato copiato negli appunti",
+    });
   }
 
   const statusColor = LEAD_STATUS_COLORS[lead.status] ?? "";
@@ -420,7 +447,7 @@ export default function LeadDetailPage({
           )}
         </div>
 
-        {/* Right: Call log */}
+        {/* Right: Call log + Analyses */}
         <div className="space-y-4">
           <Card>
             <CardHeader>
@@ -477,6 +504,66 @@ export default function LeadDetailPage({
                     </div>
                   ))}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Analyses section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Analisi ({lead.analyses?.length ?? 0})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCopyAnalysisLink}
+              >
+                <Copy className="mr-2 h-3.5 w-3.5" />
+                Invia link modulo
+              </Button>
+
+              {lead.analyses && lead.analyses.length > 0 ? (
+                <div className="space-y-2 pt-2 border-t">
+                  {lead.analyses.map((a) => (
+                    <div
+                      key={a.id}
+                      className="flex items-center justify-between rounded-md border p-2"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">
+                          {a.property_address}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(a.submitted_at).toLocaleDateString(
+                            "it-IT"
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          className={
+                            ANALYSIS_STATUS_COLORS[a.status] ?? ""
+                          }
+                        >
+                          {ANALYSIS_STATUS_LABELS[a.status] ?? a.status}
+                        </Badge>
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link href={`/manager/crm/analisi/${a.id}`}>
+                            <Eye className="h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-2">
+                  Nessuna analisi collegata
+                </p>
               )}
             </CardContent>
           </Card>
