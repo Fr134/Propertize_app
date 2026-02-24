@@ -23,19 +23,37 @@ router.post("/start/:ownerId", auth, requireManager, async (c) => {
   });
   if (existing) return c.json(existing);
 
-  const workflow = await prisma.onboardingWorkflow.create({
-    data: {
-      owner_id: ownerId,
-      steps: {
-        create: DEFAULT_ONBOARDING_STEPS.map((s) => ({
-          step_key: s.step_key,
-          label: s.label,
-          description: s.description,
-          order: s.order,
-        })),
+  const workflow = await prisma.$transaction(async (tx) => {
+    const wf = await tx.onboardingWorkflow.create({
+      data: {
+        owner_id: ownerId,
+        steps: {
+          create: DEFAULT_ONBOARDING_STEPS.map((s) => ({
+            step_key: s.step_key,
+            label: s.label,
+            description: s.description,
+            order: s.order,
+          })),
+        },
       },
-    },
-    include: { steps: { orderBy: { order: "asc" } } },
+      include: { steps: { orderBy: { order: "asc" } } },
+    });
+
+    // Auto-create onboarding file if not exists
+    const existingFile = await tx.onboardingFile.findUnique({ where: { owner_id: ownerId } });
+    if (!existingFile) {
+      await tx.onboardingFile.create({
+        data: {
+          owner_id: ownerId,
+          owner_first_name: owner.name.split(/\s+/)[0] || undefined,
+          owner_last_name: owner.name.split(/\s+/).slice(1).join(" ") || undefined,
+          owner_email: owner.email || undefined,
+          owner_phone: owner.phone || undefined,
+        },
+      });
+    }
+
+    return wf;
   });
 
   return c.json(workflow, 201);
@@ -93,7 +111,14 @@ router.get("/:ownerId", auth, requireManager, async (c) => {
   });
 
   if (!workflow) return c.json({ error: "Workflow non trovato" }, 404);
-  return c.json(workflow);
+
+  // Attach onboarding file token if exists
+  const obFile = await prisma.onboardingFile.findUnique({
+    where: { owner_id: ownerId },
+    select: { token: true, status: true },
+  });
+
+  return c.json({ ...workflow, onboarding_file: obFile || null });
 });
 
 // PATCH /api/onboarding/:ownerId/steps/:stepKey (MANAGER only)

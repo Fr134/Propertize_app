@@ -21,6 +21,7 @@ import checklistTemplatesRoutes from "./routes/checklist-templates";
 import crmRoutes from "./routes/crm";
 import analysisRoutes from "./routes/analysis";
 import onboardingRoutes from "./routes/onboarding";
+import onboardingFileRoutes from "./routes/onboarding-file";
 
 const app = new Hono<AppEnv>();
 
@@ -55,6 +56,7 @@ api.route("/properties", checklistTemplatesRoutes);
 api.route("/crm", crmRoutes);
 api.route("/analysis", analysisRoutes);
 api.route("/onboarding", onboardingRoutes);
+api.route("/onboarding-file", onboardingFileRoutes);
 
 app.route("/api", api);
 

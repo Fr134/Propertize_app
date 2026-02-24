@@ -146,6 +146,11 @@ enum LeadSource {
   OTHER
 }
 
+enum OnboardingFileStatus {
+  DRAFT
+  SUBMITTED
+}
+
 // ============================================
 // Models
 // ============================================
@@ -187,6 +192,7 @@ model Owner {
   properties          Property[]
   lead                Lead?
   onboarding_workflow OnboardingWorkflow?
+  onboarding_file     OnboardingFile?
 
   @@map("owners")
 }
@@ -809,4 +815,148 @@ model OnboardingStep {
 
   @@unique([workflow_id, step_key])
   @@map("onboarding_steps")
+}
+
+// ============================================
+// Onboarding File (public form for owners)
+// ============================================
+
+model OnboardingFile {
+  id       String               @id @default(uuid()) @db.Uuid
+  token    String               @unique @default(uuid())
+  owner_id String               @unique @db.Uuid
+  status   OnboardingFileStatus @default(DRAFT)
+
+  // Section 0 — Before starting
+  num_owners                String?
+  title_property            String?
+  property_type_description String?
+  num_levels                Int?
+  total_beds                Int?
+
+  // Section 1 — Main owner
+  owner_first_name  String?
+  owner_last_name   String?
+  owner_fiscal_code String?
+  billing_type      String?
+  owner_language    String?
+  owner_birth_date  String?
+  owner_phone       String?
+  owner_phone_alt   String?
+  owner_email       String?
+  owner_email_alt   String?
+
+  // Section 2 — Residence
+  residence_address String?
+  residence_zip     String?
+  residence_country String?
+
+  // Section 3 — Document
+  document_type        String?
+  document_number      String?
+  document_issue_place String?
+  document_issue_date  String?
+  document_file_url    String?
+
+  // Section 4 — Banking
+  bank_account_holder String?
+  bank_iban           String?
+  bank_name           String?
+  bank_bic_swift      String?
+
+  // Section 5 — Property data
+  property_condition     String?
+  property_address       String?
+  property_zip           String?
+  property_floor         String?
+  property_intercom_name String?
+  property_door_number   String?
+  property_sqm_internal  Int?
+  property_sqm_external  Int?
+
+  // Section 6 — Rooms
+  num_rooms Int?
+  rooms     Json?
+
+  // Section 7 — Common areas
+  has_sofa_bed Boolean?
+
+  // Section 8 — Bathrooms
+  num_bathrooms Int?
+  bathrooms     Json?
+
+  // Section 9 — Kitchen
+  num_kitchens      Int?
+  kitchen_layout    String?
+  kitchen_type      String?
+  kitchen_amenities Json?
+  kitchen_extra     String?
+  kitchen_notes     String?
+
+  // Section 10 — General equipment
+  general_amenities   Json?
+  internet_provider   String?
+  wifi_name           String?
+  wifi_password       String?
+  modem_sim_number    String?
+  modem_serial_number String?
+
+  // Section 11 — Self check-in
+  has_self_checkin_device Boolean?
+  self_checkin_code       String?
+  self_checkin_position   String?
+  self_checkin_photo_url  String?
+
+  // Section 12 — Parking & accessibility
+  has_parking         Boolean?
+  parking_photo_url   String?
+  has_disabled_access Boolean?
+
+  // Section 13 — Services
+  services       Json?
+  allows_pets    Boolean?
+  other_services String?
+  allows_smoking Boolean?
+
+  // Section 14 — Safety
+  safety_equipment Json?
+
+  // Section 15 — Installations
+  gas_tank_position              String?
+  gas_connection_type            String?
+  gas_photo_url                  String?
+  electricity_internal_photo_url String?
+  electricity_internal_position  String?
+  electricity_external_photo_url String?
+  electricity_external_position  String?
+  water_internal_position        String?
+  water_internal_photo_url       String?
+  water_external_position        String?
+  water_external_photo_url       String?
+
+  // Section 16 — Bureaucracy
+  planimetry_file_url       String?
+  cadastral_survey_file_url String?
+  cin_file_url              String?
+  alloggiati_web_file_url   String?
+  ross1000_credentials      String?
+
+  // Section 17 — Waste
+  has_waste_bins                Boolean?
+  waste_calendar_photo_url      String?
+  waste_bins_location_photo_url String?
+  waste_notes                   String?
+
+  // Section 18 — Conclusion
+  keys_availability_date String?
+  dates_to_block         String?
+  privacy_consent        Boolean?
+
+  submitted_at DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  owner Owner @relation(fields: [owner_id], references: [id])
+
+  @@map("onboarding_files")
 }

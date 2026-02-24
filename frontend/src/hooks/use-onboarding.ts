@@ -33,6 +33,7 @@ export interface OnboardingDetail {
   completed_at: string | null;
   notes: string | null;
   steps: OnboardingStepItem[];
+  onboarding_file: { token: string; status: string } | null;
 }
 
 // --- Hooks ---

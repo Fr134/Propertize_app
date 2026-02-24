@@ -593,3 +593,146 @@ export const updateAnalysisSchema = z.object({
 });
 
 export type UpdateAnalysisInput = z.input<typeof updateAnalysisSchema>;
+
+// ============================================
+// Onboarding File (public form)
+// ============================================
+
+export const onboardingFileRoomSchema = z.object({
+  bed_type: z.string().optional().or(z.literal("")),
+  has_ac: z.boolean().optional(),
+});
+
+export const onboardingFileBathroomSchema = z.object({
+  position: z.string().optional().or(z.literal("")),
+  amenities: z.array(z.string()).optional(),
+});
+
+export const onboardingFileSchema = z.object({
+  // Section 0 — Before starting
+  num_owners: optStr,
+  title_property: optStr,
+  property_type_description: optStr,
+  num_levels: z.number().int().optional().nullable(),
+  total_beds: z.number().int().optional().nullable(),
+
+  // Section 1 — Main owner
+  owner_first_name: optStr,
+  owner_last_name: optStr,
+  owner_fiscal_code: optStr,
+  billing_type: optStr,
+  owner_language: optStr,
+  owner_birth_date: optStr,
+  owner_phone: optStr,
+  owner_phone_alt: optStr,
+  owner_email: optStr,
+  owner_email_alt: optStr,
+
+  // Section 2 — Residence
+  residence_address: optStr,
+  residence_zip: optStr,
+  residence_country: optStr,
+
+  // Section 3 — Document
+  document_type: optStr,
+  document_number: optStr,
+  document_issue_place: optStr,
+  document_issue_date: optStr,
+  document_file_url: optStr,
+
+  // Section 4 — Banking
+  bank_account_holder: optStr,
+  bank_iban: optStr,
+  bank_name: optStr,
+  bank_bic_swift: optStr,
+
+  // Section 5 — Property data
+  property_condition: optStr,
+  property_address: optStr,
+  property_zip: optStr,
+  property_floor: optStr,
+  property_intercom_name: optStr,
+  property_door_number: optStr,
+  property_sqm_internal: z.number().int().optional().nullable(),
+  property_sqm_external: z.number().int().optional().nullable(),
+
+  // Section 6 — Rooms
+  num_rooms: z.number().int().optional().nullable(),
+  rooms: z.array(onboardingFileRoomSchema).optional().nullable(),
+
+  // Section 7 — Common areas
+  has_sofa_bed: z.boolean().optional().nullable(),
+
+  // Section 8 — Bathrooms
+  num_bathrooms: z.number().int().optional().nullable(),
+  bathrooms: z.array(onboardingFileBathroomSchema).optional().nullable(),
+
+  // Section 9 — Kitchen
+  num_kitchens: z.number().int().optional().nullable(),
+  kitchen_layout: optStr,
+  kitchen_type: optStr,
+  kitchen_amenities: z.array(z.string()).optional().nullable(),
+  kitchen_extra: optStr,
+  kitchen_notes: optStr,
+
+  // Section 10 — General equipment
+  general_amenities: z.array(z.string()).optional().nullable(),
+  internet_provider: optStr,
+  wifi_name: optStr,
+  wifi_password: optStr,
+  modem_sim_number: optStr,
+  modem_serial_number: optStr,
+
+  // Section 11 — Self check-in
+  has_self_checkin_device: z.boolean().optional().nullable(),
+  self_checkin_code: optStr,
+  self_checkin_position: optStr,
+  self_checkin_photo_url: optStr,
+
+  // Section 12 — Parking & accessibility
+  has_parking: z.boolean().optional().nullable(),
+  parking_photo_url: optStr,
+  has_disabled_access: z.boolean().optional().nullable(),
+
+  // Section 13 — Services
+  services: z.array(z.string()).optional().nullable(),
+  allows_pets: z.boolean().optional().nullable(),
+  other_services: optStr,
+  allows_smoking: z.boolean().optional().nullable(),
+
+  // Section 14 — Safety
+  safety_equipment: z.array(z.string()).optional().nullable(),
+
+  // Section 15 — Installations
+  gas_tank_position: optStr,
+  gas_connection_type: optStr,
+  gas_photo_url: optStr,
+  electricity_internal_photo_url: optStr,
+  electricity_internal_position: optStr,
+  electricity_external_photo_url: optStr,
+  electricity_external_position: optStr,
+  water_internal_position: optStr,
+  water_internal_photo_url: optStr,
+  water_external_position: optStr,
+  water_external_photo_url: optStr,
+
+  // Section 16 — Bureaucracy
+  planimetry_file_url: optStr,
+  cadastral_survey_file_url: optStr,
+  cin_file_url: optStr,
+  alloggiati_web_file_url: optStr,
+  ross1000_credentials: optStr,
+
+  // Section 17 — Waste
+  has_waste_bins: z.boolean().optional().nullable(),
+  waste_calendar_photo_url: optStr,
+  waste_bins_location_photo_url: optStr,
+  waste_notes: optStr,
+
+  // Section 18 — Conclusion
+  keys_availability_date: optStr,
+  dates_to_block: optStr,
+  privacy_consent: z.boolean().optional().nullable(),
+});
+
+export type OnboardingFileInput = z.infer<typeof onboardingFileSchema>;

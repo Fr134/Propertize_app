@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,8 @@ import {
   User,
   Mail,
   Phone,
+  Copy,
+  MessageCircle,
 } from "lucide-react";
 import { useOnboarding, useUpdateOnboardingStep } from "@/hooks/use-onboarding";
 import { useOwner } from "@/hooks/use-owners";
@@ -101,8 +103,19 @@ export default function OnboardingDetailPage({
   // Owner's first property (if any) — used for step links
   const firstProperty = owner?.properties?.[0] ?? null;
 
+  const obFileToken = workflow.onboarding_file?.token;
+  const obFileStatus = workflow.onboarding_file?.status;
+
   function getStepLink(stepKey: string): { href: string; label: string } | null {
     switch (stepKey) {
+      case "onboarding_file_completed":
+        if (obFileToken && obFileStatus === "SUBMITTED") {
+          return {
+            href: `/manager/crm/onboarding/${ownerId}/onboarding-file`,
+            label: "Visualizza dati",
+          };
+        }
+        return null;
       case "property_created":
         return {
           href: `/manager/properties/new?owner_id=${ownerId}`,
@@ -391,6 +404,15 @@ export default function OnboardingDetailPage({
                         </Link>
                       </Button>
                     )}
+
+                    {/* Onboarding file link for the onboarding_file_completed step */}
+                    {step.step_key === "onboarding_file_completed" && obFileToken && (
+                      <OnboardingFileActions
+                        token={obFileToken}
+                        status={obFileStatus || "DRAFT"}
+                        ownerPhone={workflow.owner.phone}
+                      />
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -398,6 +420,65 @@ export default function OnboardingDetailPage({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function OnboardingFileActions({
+  token,
+  status,
+  ownerPhone,
+}: {
+  token: string;
+  status: string;
+  ownerPhone: string | null;
+}) {
+  const [copied, setCopied] = useState(false);
+  const formUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/onboarding/${token}`
+      : `/onboarding/${token}`;
+
+  const handleCopy = useCallback(async () => {
+    await navigator.clipboard.writeText(formUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [formUrl]);
+
+  const whatsappUrl = ownerPhone
+    ? `https://wa.me/${ownerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(
+        `Ciao! Ecco il link per compilare l'onboarding file di Propertize:\n${formUrl}`
+      )}`
+    : null;
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button size="sm" variant="outline" onClick={handleCopy}>
+        {copied ? (
+          <Check className="mr-1.5 h-3.5 w-3.5 text-green-600" />
+        ) : (
+          <Copy className="mr-1.5 h-3.5 w-3.5" />
+        )}
+        {copied ? "Copiato!" : "Copia link"}
+      </Button>
+      {whatsappUrl && (
+        <Button size="sm" variant="outline" asChild>
+          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+            <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
+            WhatsApp
+          </a>
+        </Button>
+      )}
+      {status === "SUBMITTED" && (
+        <Badge className="bg-green-100 text-green-800 text-xs">
+          Compilato
+        </Badge>
+      )}
+      {status === "DRAFT" && (
+        <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+          In attesa
+        </Badge>
+      )}
     </div>
   );
 }

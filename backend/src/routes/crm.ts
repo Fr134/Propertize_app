@@ -212,6 +212,17 @@ router.post("/leads/:id/convert", auth, requireManager, async (c) => {
       },
     });
 
+    // Auto-create onboarding file for the owner
+    await tx.onboardingFile.create({
+      data: {
+        owner_id: owner.id,
+        owner_email: lead.email || undefined,
+        owner_phone: lead.phone || undefined,
+        owner_first_name: lead.first_name,
+        owner_last_name: lead.last_name,
+      },
+    });
+
     return owner;
   });
 
