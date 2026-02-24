@@ -102,7 +102,7 @@ router.get("/", auth, requireManager, async (c) => {
 router.get("/:ownerId", auth, requireManager, async (c) => {
   const ownerId = c.req.param("ownerId");
 
-  const workflow = await prisma.onboardingWorkflow.findUnique({
+  let workflow = await prisma.onboardingWorkflow.findUnique({
     where: { owner_id: ownerId },
     include: {
       owner: { select: { id: true, name: true, email: true, phone: true } },
@@ -112,11 +112,60 @@ router.get("/:ownerId", auth, requireManager, async (c) => {
 
   if (!workflow) return c.json({ error: "Workflow non trovato" }, 404);
 
-  // Attach onboarding file token if exists
-  const obFile = await prisma.onboardingFile.findUnique({
+  // Auto-sync: add any missing steps from DEFAULT_ONBOARDING_STEPS
+  const existingKeys = new Set(workflow.steps.map((s) => s.step_key));
+  const missingSteps = DEFAULT_ONBOARDING_STEPS.filter(
+    (d) => !existingKeys.has(d.step_key)
+  );
+  if (missingSteps.length > 0) {
+    await prisma.onboardingStep.createMany({
+      data: missingSteps.map((s) => ({
+        workflow_id: workflow!.id,
+        step_key: s.step_key,
+        label: s.label,
+        description: s.description,
+        order: s.order,
+      })),
+    });
+    // Also fix order for all steps to match defaults
+    for (const d of DEFAULT_ONBOARDING_STEPS) {
+      await prisma.onboardingStep.updateMany({
+        where: { workflow_id: workflow.id, step_key: d.step_key },
+        data: { order: d.order },
+      });
+    }
+    // Re-fetch with updated steps
+    workflow = await prisma.onboardingWorkflow.findUnique({
+      where: { owner_id: ownerId },
+      include: {
+        owner: { select: { id: true, name: true, email: true, phone: true } },
+        steps: { orderBy: { order: "asc" } },
+      },
+    });
+    if (!workflow) return c.json({ error: "Workflow non trovato" }, 404);
+  }
+
+  // Auto-create OnboardingFile if not exists
+  let obFile = await prisma.onboardingFile.findUnique({
     where: { owner_id: ownerId },
     select: { token: true, status: true },
   });
+  if (!obFile) {
+    const owner = await prisma.owner.findUnique({ where: { id: ownerId } });
+    if (owner) {
+      const created = await prisma.onboardingFile.create({
+        data: {
+          owner_id: ownerId,
+          owner_first_name: owner.name.split(/\s+/)[0] || undefined,
+          owner_last_name: owner.name.split(/\s+/).slice(1).join(" ") || undefined,
+          owner_email: owner.email || undefined,
+          owner_phone: owner.phone || undefined,
+        },
+        select: { token: true, status: true },
+      });
+      obFile = created;
+    }
+  }
 
   return c.json({ ...workflow, onboarding_file: obFile || null });
 });
