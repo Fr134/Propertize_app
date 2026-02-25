@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { requirePermission } from "../middleware/permissions";
 import { checklistTemplateSchema } from "../lib/validators";
 import type { AppEnv } from "../types";
 import type { Prisma } from "@prisma/client";
@@ -23,7 +24,7 @@ router.get("/:propertyId/checklist-template", auth, async (c) => {
 });
 
 // POST /api/properties/:propertyId/checklist-template
-router.post("/:propertyId/checklist-template", auth, requireManager, async (c) => {
+router.post("/:propertyId/checklist-template", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const propertyId = c.req.param("propertyId");
 
   const property = await prisma.property.findUnique({ where: { id: propertyId } });

@@ -164,6 +164,22 @@ model User {
   role          UserRole
   phone         String?
   avatar_url    String?
+
+  // Granular permissions (for MANAGER role)
+  can_manage_leads       Boolean @default(false)
+  can_do_analysis        Boolean @default(false)
+  can_manage_operations  Boolean @default(false)
+  can_manage_finance     Boolean @default(false)
+  can_manage_team        Boolean @default(false)
+  can_manage_onboarding  Boolean @default(false)
+  is_super_admin         Boolean @default(false)
+
+  // Account status
+  active                 Boolean @default(true)
+
+  // Operator future: property restrictions (predisposition only)
+  allowed_property_ids   Json?   // null = all properties
+
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 

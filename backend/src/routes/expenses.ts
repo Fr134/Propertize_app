@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { requirePermission } from "../middleware/permissions";
 import type { AppEnv } from "../types";
 
 const router = new Hono<AppEnv>();
@@ -12,7 +13,7 @@ const updateExpenseSchema = z.object({
 });
 
 // PATCH /api/expenses/:id
-router.patch("/:id", auth, requireManager, async (c) => {
+router.patch("/:id", auth, requireManager, requirePermission("can_manage_finance"), async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
   const parsed = updateExpenseSchema.safeParse(body);
@@ -60,7 +61,7 @@ router.patch("/:id", auth, requireManager, async (c) => {
 });
 
 // POST /api/expenses/:id/photos
-router.post("/:id/photos", auth, requireManager, async (c) => {
+router.post("/:id/photos", auth, requireManager, requirePermission("can_manage_finance"), async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
   const { photoUrl } = body as { photoUrl: string };

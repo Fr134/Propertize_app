@@ -22,6 +22,7 @@ import crmRoutes from "./routes/crm";
 import analysisRoutes from "./routes/analysis";
 import onboardingRoutes from "./routes/onboarding";
 import onboardingFileRoutes from "./routes/onboarding-file";
+import teamRoutes from "./routes/team";
 
 const app = new Hono<AppEnv>();
 
@@ -57,6 +58,7 @@ api.route("/crm", crmRoutes);
 api.route("/analysis", analysisRoutes);
 api.route("/onboarding", onboardingRoutes);
 api.route("/onboarding-file", onboardingFileRoutes);
+api.route("/team", teamRoutes);
 
 app.route("/api", api);
 

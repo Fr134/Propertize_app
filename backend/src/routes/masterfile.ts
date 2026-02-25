@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { requirePermission } from "../middleware/permissions";
 import {
   masterfileSchema,
   updatePropertyOperationalSchema,
@@ -16,7 +17,7 @@ const router = new Hono<AppEnv>();
 // ============================================
 
 // PATCH /api/masterfile/:propertyId/operational
-router.patch("/:propertyId/operational", auth, requireManager, async (c) => {
+router.patch("/:propertyId/operational", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const propertyId = c.req.param("propertyId");
 
   const property = await prisma.property.findUnique({ where: { id: propertyId } });
@@ -91,7 +92,7 @@ router.get("/:propertyId", auth, async (c) => {
 });
 
 // POST /api/masterfile/:propertyId
-router.post("/:propertyId", auth, requireManager, async (c) => {
+router.post("/:propertyId", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const propertyId = c.req.param("propertyId");
 
   const property = await prisma.property.findUnique({ where: { id: propertyId } });
@@ -211,7 +212,7 @@ router.get("/:propertyId/inventory", auth, async (c) => {
 });
 
 // POST /api/masterfile/:propertyId/inventory
-router.post("/:propertyId/inventory", auth, requireManager, async (c) => {
+router.post("/:propertyId/inventory", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const propertyId = c.req.param("propertyId");
 
   const property = await prisma.property.findUnique({ where: { id: propertyId } });
@@ -239,7 +240,7 @@ router.post("/:propertyId/inventory", auth, requireManager, async (c) => {
 });
 
 // PATCH /api/masterfile/:propertyId/inventory/:itemId
-router.patch("/:propertyId/inventory/:itemId", auth, requireManager, async (c) => {
+router.patch("/:propertyId/inventory/:itemId", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const propertyId = c.req.param("propertyId");
   const itemId = c.req.param("itemId");
 
@@ -274,7 +275,7 @@ router.patch("/:propertyId/inventory/:itemId", auth, requireManager, async (c) =
 });
 
 // DELETE /api/masterfile/:propertyId/inventory/:itemId
-router.delete("/:propertyId/inventory/:itemId", auth, requireManager, async (c) => {
+router.delete("/:propertyId/inventory/:itemId", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const propertyId = c.req.param("propertyId");
   const itemId = c.req.param("itemId");
 

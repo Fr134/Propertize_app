@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { requirePermission } from "../middleware/permissions";
 import { createExternalContactSchema } from "../lib/validators";
 import type { AppEnv } from "../types";
 
@@ -21,7 +22,7 @@ router.get("/", auth, async (c) => {
 });
 
 // POST /api/external-contacts
-router.post("/", auth, requireManager, async (c) => {
+router.post("/", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const body = await c.req.json();
   const parsed = createExternalContactSchema.safeParse(body);
   if (!parsed.success) {
@@ -38,7 +39,7 @@ router.post("/", auth, requireManager, async (c) => {
 });
 
 // PATCH /api/external-contacts/:id
-router.patch("/:id", auth, requireManager, async (c) => {
+router.patch("/:id", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const id = c.req.param("id");
 
   const existing = await prisma.externalContact.findUnique({ where: { id } });
@@ -64,7 +65,7 @@ router.patch("/:id", auth, requireManager, async (c) => {
 });
 
 // DELETE /api/external-contacts/:id (soft delete)
-router.delete("/:id", auth, requireManager, async (c) => {
+router.delete("/:id", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const id = c.req.param("id");
 
   const existing = await prisma.externalContact.findUnique({ where: { id } });

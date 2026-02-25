@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { Resend } from "resend";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { requirePermission } from "../middleware/permissions";
 import { onboardingFileSchema } from "../lib/validators";
 import type { AppEnv } from "../types";
 import type { Prisma } from "@prisma/client";
@@ -244,7 +245,7 @@ router.get("/owner/:ownerId", auth, requireManager, async (c) => {
 });
 
 // POST /api/onboarding-file/create/:ownerId — create for owner (manager)
-router.post("/create/:ownerId", auth, requireManager, async (c) => {
+router.post("/create/:ownerId", auth, requireManager, requirePermission("can_manage_onboarding"), async (c) => {
   const ownerId = c.req.param("ownerId");
 
   const owner = await prisma.owner.findUnique({ where: { id: ownerId } });

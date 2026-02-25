@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { requirePermission } from "../middleware/permissions";
 import { createLeadSchema, updateLeadSchema, createCallSchema } from "../lib/validators";
 import { DEFAULT_ONBOARDING_STEPS } from "../lib/onboarding-defaults";
 import type { AppEnv } from "../types";
@@ -27,7 +28,7 @@ router.get("/leads", auth, async (c) => {
 });
 
 // POST /api/crm/leads
-router.post("/leads", auth, requireManager, async (c) => {
+router.post("/leads", auth, requireManager, requirePermission("can_manage_leads"), async (c) => {
   const body = await c.req.json();
   const parsed = createLeadSchema.safeParse(body);
   if (!parsed.success) {
@@ -84,7 +85,7 @@ router.get("/leads/:id", auth, async (c) => {
 });
 
 // PATCH /api/crm/leads/:id
-router.patch("/leads/:id", auth, requireManager, async (c) => {
+router.patch("/leads/:id", auth, requireManager, requirePermission("can_manage_leads"), async (c) => {
   const id = c.req.param("id");
 
   const existing = await prisma.lead.findUnique({ where: { id } });
@@ -123,7 +124,7 @@ router.patch("/leads/:id", auth, requireManager, async (c) => {
 });
 
 // DELETE /api/crm/leads/:id
-router.delete("/leads/:id", auth, requireManager, async (c) => {
+router.delete("/leads/:id", auth, requireManager, requirePermission("can_manage_leads"), async (c) => {
   const id = c.req.param("id");
 
   const lead = await prisma.lead.findUnique({
@@ -143,7 +144,7 @@ router.delete("/leads/:id", auth, requireManager, async (c) => {
 });
 
 // POST /api/crm/leads/:id/calls
-router.post("/leads/:id/calls", auth, requireManager, async (c) => {
+router.post("/leads/:id/calls", auth, requireManager, requirePermission("can_manage_leads"), async (c) => {
   const leadId = c.req.param("id");
   const userId = c.get("userId");
 
@@ -169,7 +170,7 @@ router.post("/leads/:id/calls", auth, requireManager, async (c) => {
 });
 
 // POST /api/crm/leads/:id/convert
-router.post("/leads/:id/convert", auth, requireManager, async (c) => {
+router.post("/leads/:id/convert", auth, requireManager, requirePermission("can_manage_leads"), async (c) => {
   const id = c.req.param("id");
 
   const lead = await prisma.lead.findUnique({ where: { id } });

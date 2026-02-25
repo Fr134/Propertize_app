@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { requirePermission } from "../middleware/permissions";
 import { getPaginationParams, createPaginatedResponse } from "../lib/pagination";
 import {
   createTaskSchema,
@@ -69,7 +70,7 @@ router.get("/", auth, async (c) => {
 });
 
 // POST /api/tasks
-router.post("/", auth, requireManager, async (c) => {
+router.post("/", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const body = await c.req.json();
   const parsed = createTaskSchema.safeParse(body);
   if (!parsed.success) {
@@ -252,7 +253,7 @@ router.get("/:id", auth, async (c) => {
 });
 
 // DELETE /api/tasks/:id
-router.delete("/:id", auth, requireManager, async (c) => {
+router.delete("/:id", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const id = c.req.param("id");
 
   const task = await prisma.task.findUnique({ where: { id } });
@@ -364,7 +365,7 @@ router.patch("/:id/complete", auth, async (c) => {
 });
 
 // PATCH /api/tasks/:id/done (non-CLEANING tasks → DONE)
-router.patch("/:id/done", auth, requireManager, async (c) => {
+router.patch("/:id/done", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const id = c.req.param("id");
 
   const task = await prisma.task.findUnique({ where: { id } });
@@ -392,7 +393,7 @@ router.patch("/:id/done", auth, requireManager, async (c) => {
 });
 
 // PATCH /api/tasks/:id/reschedule
-router.patch("/:id/reschedule", auth, requireManager, async (c) => {
+router.patch("/:id/reschedule", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
   const parsed = rescheduleTaskSchema.safeParse(body);
@@ -593,7 +594,7 @@ router.patch("/:id/checklist", auth, async (c) => {
 });
 
 // PATCH /api/tasks/:id/review
-router.patch("/:id/review", auth, requireManager, async (c) => {
+router.patch("/:id/review", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const id = c.req.param("id");
   const userId = c.get("userId");
   const body = await c.req.json();
@@ -635,7 +636,7 @@ router.patch("/:id/review", auth, requireManager, async (c) => {
 });
 
 // PATCH /api/tasks/:id/reopen
-router.patch("/:id/reopen", auth, requireManager, async (c) => {
+router.patch("/:id/reopen", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const id = c.req.param("id");
   const userId = c.get("userId");
   const body = await c.req.json();

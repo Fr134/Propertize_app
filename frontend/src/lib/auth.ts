@@ -1,6 +1,16 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
+const DEFAULT_PERMISSIONS = {
+  is_super_admin: false,
+  can_manage_leads: false,
+  can_do_analysis: false,
+  can_manage_operations: false,
+  can_manage_finance: false,
+  can_manage_team: false,
+  can_manage_onboarding: false,
+};
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
@@ -37,6 +47,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             name: user.name,
             role: user.role,
             accessToken,
+            permissions: user.permissions ?? DEFAULT_PERMISSIONS,
           };
         } catch {
           return null;
@@ -50,6 +61,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = user.role;
         token.id = user.id;
         token.accessToken = (user as { accessToken?: string }).accessToken;
+        token.permissions =
+          (user as { permissions?: typeof DEFAULT_PERMISSIONS }).permissions ??
+          DEFAULT_PERMISSIONS;
       }
       return token;
     },
@@ -58,6 +72,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.role = token.role as string;
         session.user.id = token.id as string;
         session.user.accessToken = token.accessToken as string;
+        session.user.permissions = token.permissions ?? DEFAULT_PERMISSIONS;
       }
       return session;
     },

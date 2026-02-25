@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { requirePermission } from "../middleware/permissions";
 import { DEFAULT_ONBOARDING_STEPS } from "../lib/onboarding-defaults";
 import type { AppEnv } from "../types";
 import type { OnboardingStepStatus } from "@prisma/client";
@@ -10,7 +11,7 @@ const router = new Hono<AppEnv>();
 const VALID_STATUSES: OnboardingStepStatus[] = ["PENDING", "IN_PROGRESS", "COMPLETED", "SKIPPED"];
 
 // POST /api/onboarding/start/:ownerId (MANAGER only)
-router.post("/start/:ownerId", auth, requireManager, async (c) => {
+router.post("/start/:ownerId", auth, requireManager, requirePermission("can_manage_onboarding"), async (c) => {
   const ownerId = c.req.param("ownerId");
 
   const owner = await prisma.owner.findUnique({ where: { id: ownerId } });
@@ -171,7 +172,7 @@ router.get("/:ownerId", auth, requireManager, async (c) => {
 });
 
 // PATCH /api/onboarding/:ownerId/steps/:stepKey (MANAGER only)
-router.patch("/:ownerId/steps/:stepKey", auth, requireManager, async (c) => {
+router.patch("/:ownerId/steps/:stepKey", auth, requireManager, requirePermission("can_manage_onboarding"), async (c) => {
   const ownerId = c.req.param("ownerId");
   const stepKey = c.req.param("stepKey");
 

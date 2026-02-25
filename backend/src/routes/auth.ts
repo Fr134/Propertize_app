@@ -33,13 +33,37 @@ router.post("/login", async (c) => {
     return c.json({ error: "Credenziali non valide" }, 401);
   }
 
+  if (!user.active) {
+    return c.json({ error: "Account disattivato" }, 403);
+  }
+
   const secret = new TextEncoder().encode(process.env.AUTH_SECRET!);
-  const accessToken = await new SignJWT({ role: user.role })
+  const accessToken = await new SignJWT({
+    role: user.role,
+    active: user.active,
+    is_super_admin: user.is_super_admin,
+    can_manage_leads: user.can_manage_leads,
+    can_do_analysis: user.can_do_analysis,
+    can_manage_operations: user.can_manage_operations,
+    can_manage_finance: user.can_manage_finance,
+    can_manage_team: user.can_manage_team,
+    can_manage_onboarding: user.can_manage_onboarding,
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.id)
     .setIssuedAt()
     .setExpirationTime("7d")
     .sign(secret);
+
+  const permissions = {
+    is_super_admin: user.is_super_admin,
+    can_manage_leads: user.can_manage_leads,
+    can_do_analysis: user.can_do_analysis,
+    can_manage_operations: user.can_manage_operations,
+    can_manage_finance: user.can_manage_finance,
+    can_manage_team: user.can_manage_team,
+    can_manage_onboarding: user.can_manage_onboarding,
+  };
 
   return c.json({
     accessToken,
@@ -48,6 +72,7 @@ router.post("/login", async (c) => {
       email: user.email,
       name: `${user.first_name} ${user.last_name}`,
       role: user.role,
+      permissions,
     },
   });
 });

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { requirePermission } from "../middleware/permissions";
 import { getPaginationParams, createPaginatedResponse } from "../lib/pagination";
 import {
   createSupplyItemSchema,
@@ -31,7 +32,7 @@ router.get("/items", auth, async (c) => {
 });
 
 // POST /api/inventory/items
-router.post("/items", auth, requireManager, async (c) => {
+router.post("/items", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const body = await c.req.json();
   const parsed = createSupplyItemSchema.safeParse(body);
   if (!parsed.success) {
@@ -52,7 +53,7 @@ router.post("/items", auth, requireManager, async (c) => {
 });
 
 // PATCH /api/inventory/items/:id
-router.patch("/items/:id", auth, requireManager, async (c) => {
+router.patch("/items/:id", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
   const parsed = updateSupplyItemSchema.safeParse(body);
@@ -94,7 +95,7 @@ router.get("/stock", auth, requireManager, async (c) => {
 });
 
 // PATCH /api/inventory/stock/:supplyItemId
-router.patch("/stock/:supplyItemId", auth, requireManager, async (c) => {
+router.patch("/stock/:supplyItemId", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const supplyItemId = c.req.param("supplyItemId");
   const userId = c.get("userId");
   const body = await c.req.json();
@@ -297,7 +298,7 @@ router.get("/orders", auth, requireManager, async (c) => {
 });
 
 // POST /api/inventory/orders
-router.post("/orders", auth, requireManager, async (c) => {
+router.post("/orders", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const userId = c.get("userId");
   const body = await c.req.json();
   const parsed = createPurchaseOrderSchema.safeParse(body);
@@ -348,7 +349,7 @@ router.get("/orders/:id", auth, requireManager, async (c) => {
 });
 
 // PATCH /api/inventory/orders/:id
-router.patch("/orders/:id", auth, requireManager, async (c) => {
+router.patch("/orders/:id", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
   const { status } = body;
@@ -377,7 +378,7 @@ router.patch("/orders/:id", auth, requireManager, async (c) => {
 });
 
 // POST /api/inventory/orders/:id/receive
-router.post("/orders/:id/receive", auth, requireManager, async (c) => {
+router.post("/orders/:id/receive", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const id = c.req.param("id");
   const userId = c.get("userId");
   const body = await c.req.json();

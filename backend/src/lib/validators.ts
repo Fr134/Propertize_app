@@ -736,3 +736,50 @@ export const onboardingFileSchema = z.object({
 });
 
 export type OnboardingFileInput = z.infer<typeof onboardingFileSchema>;
+
+// ============================================
+// Team Management
+// ============================================
+
+export const inviteTeamMemberSchema = z.object({
+  email: z.string().email("Email non valida"),
+  password: z.string().min(6, "La password deve avere almeno 6 caratteri"),
+  first_name: z.string().min(1, "Nome obbligatorio"),
+  last_name: z.string().min(1, "Cognome obbligatorio"),
+  role: z.enum(["MANAGER", "OPERATOR"]),
+  phone: z.string().optional().or(z.literal("")),
+  can_manage_leads: z.boolean().default(false),
+  can_do_analysis: z.boolean().default(false),
+  can_manage_operations: z.boolean().default(false),
+  can_manage_finance: z.boolean().default(false),
+  can_manage_team: z.boolean().default(false),
+  can_manage_onboarding: z.boolean().default(false),
+});
+
+export type InviteTeamMemberInput = z.infer<typeof inviteTeamMemberSchema>;
+
+export const updateTeamMemberSchema = z.object({
+  first_name: z.string().min(1).optional(),
+  last_name: z.string().min(1).optional(),
+  email: z.string().email("Email non valida").optional(),
+  phone: z.string().optional().or(z.literal("")),
+});
+
+export type UpdateTeamMemberInput = z.infer<typeof updateTeamMemberSchema>;
+
+export const updatePermissionsSchema = z.object({
+  can_manage_leads: z.boolean().optional(),
+  can_do_analysis: z.boolean().optional(),
+  can_manage_operations: z.boolean().optional(),
+  can_manage_finance: z.boolean().optional(),
+  can_manage_team: z.boolean().optional(),
+  can_manage_onboarding: z.boolean().optional(),
+});
+
+export type UpdatePermissionsInput = z.infer<typeof updatePermissionsSchema>;
+
+export const resetPasswordSchema = z.object({
+  password: z.string().min(6, "La password deve avere almeno 6 caratteri"),
+});
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import ExcelJS from "exceljs";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { requirePermission } from "../middleware/permissions";
 import { submitAnalysisSchema, updateAnalysisSchema } from "../lib/validators";
 import type { AppEnv } from "../types";
 import type { AnalysisStatus } from "@prisma/client";
@@ -186,7 +187,7 @@ router.get("/:id", auth, requireManager, async (c) => {
 });
 
 // PATCH /api/analysis/:id (MANAGER only)
-router.patch("/:id", auth, requireManager, async (c) => {
+router.patch("/:id", auth, requireManager, requirePermission("can_do_analysis"), async (c) => {
   const id = c.req.param("id");
 
   const existing = await prisma.propertyAnalysis.findUnique({ where: { id } });
@@ -257,7 +258,7 @@ router.patch("/:id", auth, requireManager, async (c) => {
 });
 
 // POST /api/analysis/:id/link-lead (MANAGER only)
-router.post("/:id/link-lead", auth, requireManager, async (c) => {
+router.post("/:id/link-lead", auth, requireManager, requirePermission("can_do_analysis"), async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
   const leadId = body.lead_id;

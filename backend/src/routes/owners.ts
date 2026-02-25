@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { requirePermission } from "../middleware/permissions";
 import { createOwnerSchema, updateOwnerSchema } from "../lib/validators";
 import type { AppEnv } from "../types";
 
@@ -27,7 +28,7 @@ router.get("/", auth, requireManager, async (c) => {
 });
 
 // POST /api/owners
-router.post("/", auth, requireManager, async (c) => {
+router.post("/", auth, requireManager, requirePermission("can_manage_leads"), async (c) => {
   const body = await c.req.json();
   const parsed = createOwnerSchema.safeParse(body);
   if (!parsed.success) {
@@ -71,7 +72,7 @@ router.get("/:id", auth, requireManager, async (c) => {
 });
 
 // PATCH /api/owners/:id
-router.patch("/:id", auth, requireManager, async (c) => {
+router.patch("/:id", auth, requireManager, requirePermission("can_manage_leads"), async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
   const parsed = updateOwnerSchema.safeParse(body);
@@ -108,7 +109,7 @@ router.patch("/:id", auth, requireManager, async (c) => {
 });
 
 // DELETE /api/owners/:id (soft delete)
-router.delete("/:id", auth, requireManager, async (c) => {
+router.delete("/:id", auth, requireManager, requirePermission("can_manage_leads"), async (c) => {
   const id = c.req.param("id");
 
   const owner = await prisma.owner.findUnique({

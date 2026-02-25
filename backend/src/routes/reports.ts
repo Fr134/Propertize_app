@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { requirePermission } from "../middleware/permissions";
 import { getPaginationParams, createPaginatedResponse } from "../lib/pagination";
 import { createReportSchema, updateReportStatusSchema } from "../lib/validators";
 import type { AppEnv } from "../types";
@@ -87,7 +88,7 @@ router.get("/:id", auth, async (c) => {
 });
 
 // PATCH /api/reports/:id/status
-router.patch("/:id/status", auth, requireManager, async (c) => {
+router.patch("/:id/status", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
   const parsed = updateReportStatusSchema.safeParse(body);

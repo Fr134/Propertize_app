@@ -11,13 +11,28 @@ async function main() {
   // --- Users ---
   const manager = await prisma.user.upsert({
     where: { email: "manager@test.com" },
-    update: {},
+    update: {
+      is_super_admin: true,
+      can_manage_leads: true,
+      can_do_analysis: true,
+      can_manage_operations: true,
+      can_manage_finance: true,
+      can_manage_team: true,
+      can_manage_onboarding: true,
+    },
     create: {
       email: "manager@test.com",
       password_hash: passwordHash,
       first_name: "Marco",
       last_name: "Rossi",
       role: "MANAGER",
+      is_super_admin: true,
+      can_manage_leads: true,
+      can_do_analysis: true,
+      can_manage_operations: true,
+      can_manage_finance: true,
+      can_manage_team: true,
+      can_manage_onboarding: true,
     },
   });
   console.log("✅ Manager:", manager.email);

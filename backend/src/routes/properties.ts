@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { requirePermission } from "../middleware/permissions";
 import { getPaginationParams, createPaginatedResponse } from "../lib/pagination";
 import {
   createPropertySchema,
@@ -31,7 +32,7 @@ router.get("/", auth, async (c) => {
 });
 
 // POST /api/properties
-router.post("/", auth, requireManager, async (c) => {
+router.post("/", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
   const body = await c.req.json();
   const parsed = createPropertySchema.safeParse(body);
   if (!parsed.success) {
@@ -115,7 +116,7 @@ router.get("/:id/expenses", auth, requireManager, async (c) => {
 });
 
 // POST /api/properties/:id/expenses
-router.post("/:id/expenses", auth, requireManager, async (c) => {
+router.post("/:id/expenses", auth, requireManager, requirePermission("can_manage_finance"), async (c) => {
   const id = c.req.param("id");
   const userId = c.get("userId");
 
