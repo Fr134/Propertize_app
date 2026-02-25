@@ -3,6 +3,7 @@ import {
   inviteTeamMemberSchema,
   updatePermissionsSchema,
   resetPasswordSchema,
+  reassignSchema,
 } from "../lib/validators";
 
 describe("inviteTeamMemberSchema", () => {
@@ -112,6 +113,25 @@ describe("resetPasswordSchema", () => {
 
   it("should fail without password", () => {
     const result = resetPasswordSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("reassignSchema", () => {
+  it("should pass with valid UUID", () => {
+    const result = reassignSchema.safeParse({
+      assigned_to_id: "550e8400-e29b-41d4-a716-446655440000",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should fail with non-UUID string", () => {
+    const result = reassignSchema.safeParse({ assigned_to_id: "not-a-uuid" });
+    expect(result.success).toBe(false);
+  });
+
+  it("should fail without assigned_to_id", () => {
+    const result = reassignSchema.safeParse({});
     expect(result.success).toBe(false);
   });
 });

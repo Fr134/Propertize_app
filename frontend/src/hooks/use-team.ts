@@ -18,6 +18,10 @@ export interface TeamMember {
   can_manage_team: boolean;
   can_manage_onboarding: boolean;
   is_super_admin: boolean;
+  leads_assignment_count: number;
+  analysis_assignment_count: number;
+  operations_assignment_count: number;
+  onboarding_assignment_count: number;
   created_at: string;
 }
 

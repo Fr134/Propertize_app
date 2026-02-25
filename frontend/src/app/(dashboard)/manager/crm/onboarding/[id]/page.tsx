@@ -31,8 +31,9 @@ import {
   Copy,
   MessageCircle,
 } from "lucide-react";
-import { useOnboarding, useUpdateOnboardingStep } from "@/hooks/use-onboarding";
+import { useOnboarding, useUpdateOnboardingStep, useReassignOnboarding } from "@/hooks/use-onboarding";
 import { useOwner } from "@/hooks/use-owners";
+import { ReassignSelect } from "@/components/manager/reassign-select";
 
 const STATUS_CONFIG: Record<
   string,
@@ -69,6 +70,7 @@ export default function OnboardingDetailPage({
   const { data: workflow, isLoading } = useOnboarding(ownerId);
   const { data: owner } = useOwner(ownerId);
   const updateStep = useUpdateOnboardingStep(ownerId);
+  const reassignOnboarding = useReassignOnboarding(ownerId);
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
 
   if (isLoading) {
@@ -190,6 +192,12 @@ export default function OnboardingDetailPage({
               </span>
             )}
           </div>
+          <ReassignSelect
+            currentAssignee={workflow.assigned_to}
+            permissionField="can_manage_onboarding"
+            onReassign={(userId) => reassignOnboarding.mutate(userId)}
+            isPending={reassignOnboarding.isPending}
+          />
         </div>
         <Button variant="outline" size="sm" asChild>
           <Link href={`/manager/owners/${ownerId}`}>

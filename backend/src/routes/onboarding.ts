@@ -3,6 +3,8 @@ import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
 import { requirePermission } from "../middleware/permissions";
 import { DEFAULT_ONBOARDING_STEPS } from "../lib/onboarding-defaults";
+import { reassignSchema } from "../lib/validators";
+import { incrementAssignmentCount, decrementAssignmentCount } from "../lib/assignment";
 import type { AppEnv } from "../types";
 import type { OnboardingStepStatus } from "@prisma/client";
 
@@ -76,6 +78,7 @@ router.get("/", auth, requireManager, async (c) => {
     orderBy: { started_at: "desc" },
     include: {
       owner: { select: { id: true, name: true, email: true, phone: true } },
+      assigned_to: { select: { id: true, first_name: true, last_name: true } },
       steps: { select: { status: true } },
     },
   });
@@ -89,6 +92,7 @@ router.get("/", auth, requireManager, async (c) => {
       id: w.id,
       owner_id: w.owner_id,
       owner: w.owner,
+      assigned_to: w.assigned_to,
       started_at: w.started_at,
       completed_at: w.completed_at,
       notes: w.notes,
@@ -107,6 +111,7 @@ router.get("/:ownerId", auth, requireManager, async (c) => {
     where: { owner_id: ownerId },
     include: {
       owner: { select: { id: true, name: true, email: true, phone: true } },
+      assigned_to: { select: { id: true, first_name: true, last_name: true } },
       steps: { orderBy: { order: "asc" } },
     },
   });
@@ -140,6 +145,7 @@ router.get("/:ownerId", auth, requireManager, async (c) => {
       where: { owner_id: ownerId },
       include: {
         owner: { select: { id: true, name: true, email: true, phone: true } },
+        assigned_to: { select: { id: true, first_name: true, last_name: true } },
         steps: { orderBy: { order: "asc" } },
       },
     });
@@ -222,6 +228,52 @@ router.patch("/:ownerId/steps/:stepKey", auth, requireManager, requirePermission
       data: { completed_at: null },
     });
   }
+
+  return c.json(updated);
+});
+
+// PATCH /api/onboarding/:ownerId/reassign (MANAGER only)
+router.patch("/:ownerId/reassign", auth, requireManager, requirePermission("can_manage_onboarding"), async (c) => {
+  const ownerId = c.req.param("ownerId");
+
+  const workflow = await prisma.onboardingWorkflow.findUnique({
+    where: { owner_id: ownerId },
+  });
+  if (!workflow) return c.json({ error: "Workflow non trovato" }, 404);
+
+  const body = await c.req.json();
+  const parsed = reassignSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.issues[0].message }, 400);
+  }
+
+  // Verify target user exists and has permission
+  const targetUser = await prisma.user.findUnique({
+    where: { id: parsed.data.assigned_to_id },
+  });
+  if (!targetUser || !targetUser.active || targetUser.role !== "MANAGER") {
+    return c.json({ error: "Utente non valido" }, 400);
+  }
+  if (!targetUser.is_super_admin && !targetUser.can_manage_onboarding) {
+    return c.json({ error: "L'utente non ha il permesso Onboarding" }, 400);
+  }
+
+  // Decrement old assignee count
+  if (workflow.assigned_to_id) {
+    await decrementAssignmentCount(workflow.assigned_to_id, "onboarding");
+  }
+
+  // Assign to new user
+  const updated = await prisma.onboardingWorkflow.update({
+    where: { id: workflow.id },
+    data: { assigned_to_id: parsed.data.assigned_to_id },
+    include: {
+      owner: { select: { id: true, name: true, email: true, phone: true } },
+      assigned_to: { select: { id: true, first_name: true, last_name: true } },
+    },
+  });
+
+  await incrementAssignmentCount(parsed.data.assigned_to_id, "onboarding");
 
   return c.json(updated);
 });

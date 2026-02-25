@@ -4,7 +4,8 @@ import ExcelJS from "exceljs";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
 import { requirePermission } from "../middleware/permissions";
-import { submitAnalysisSchema, updateAnalysisSchema } from "../lib/validators";
+import { submitAnalysisSchema, updateAnalysisSchema, reassignSchema } from "../lib/validators";
+import { getNextAssignee, incrementAssignmentCount, decrementAssignmentCount } from "../lib/assignment";
 import type { AppEnv } from "../types";
 import type { AnalysisStatus } from "@prisma/client";
 
@@ -42,9 +43,13 @@ router.post("/submit", async (c) => {
     }
   }
 
+  // Auto-assign via round-robin
+  const assigneeId = await getNextAssignee("analysis");
+
   const analysis = await prisma.propertyAnalysis.create({
     data: {
       lead_id: leadId,
+      assigned_to_id: assigneeId,
       client_name: parsed.data.client_name,
       client_email: parsed.data.client_email,
       client_phone: parsed.data.client_phone || null,
@@ -61,6 +66,10 @@ router.post("/submit", async (c) => {
       additional_notes: parsed.data.additional_notes || null,
     },
   });
+
+  if (assigneeId) {
+    await incrementAssignmentCount(assigneeId, "analysis");
+  }
 
   // Send email notification to manager
   const resendClient = getResend();
@@ -103,6 +112,7 @@ router.get("/", auth, requireManager, async (c) => {
     orderBy: { submitted_at: "desc" },
     include: {
       lead: { select: { id: true, first_name: true, last_name: true } },
+      assigned_to: { select: { id: true, first_name: true, last_name: true } },
     },
   });
 
@@ -179,6 +189,7 @@ router.get("/:id", auth, requireManager, async (c) => {
     where: { id },
     include: {
       lead: { select: { id: true, first_name: true, last_name: true } },
+      assigned_to: { select: { id: true, first_name: true, last_name: true } },
     },
   });
 
@@ -215,6 +226,7 @@ router.patch("/:id", auth, requireManager, requirePermission("can_do_analysis"),
     },
     include: {
       lead: { select: { id: true, first_name: true, last_name: true } },
+      assigned_to: { select: { id: true, first_name: true, last_name: true } },
     },
   });
 
@@ -276,8 +288,53 @@ router.post("/:id/link-lead", auth, requireManager, requirePermission("can_do_an
     data: { lead_id: leadId },
     include: {
       lead: { select: { id: true, first_name: true, last_name: true } },
+      assigned_to: { select: { id: true, first_name: true, last_name: true } },
     },
   });
+
+  return c.json(updated);
+});
+
+// PATCH /api/analysis/:id/reassign (MANAGER only)
+router.patch("/:id/reassign", auth, requireManager, requirePermission("can_do_analysis"), async (c) => {
+  const id = c.req.param("id");
+
+  const analysis = await prisma.propertyAnalysis.findUnique({ where: { id } });
+  if (!analysis) return c.json({ error: "Analisi non trovata" }, 404);
+
+  const body = await c.req.json();
+  const parsed = reassignSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.issues[0].message }, 400);
+  }
+
+  // Verify target user exists and has permission
+  const targetUser = await prisma.user.findUnique({
+    where: { id: parsed.data.assigned_to_id },
+  });
+  if (!targetUser || !targetUser.active || targetUser.role !== "MANAGER") {
+    return c.json({ error: "Utente non valido" }, 400);
+  }
+  if (!targetUser.is_super_admin && !targetUser.can_do_analysis) {
+    return c.json({ error: "L'utente non ha il permesso Analisi" }, 400);
+  }
+
+  // Decrement old assignee count
+  if (analysis.assigned_to_id) {
+    await decrementAssignmentCount(analysis.assigned_to_id, "analysis");
+  }
+
+  // Assign to new user
+  const updated = await prisma.propertyAnalysis.update({
+    where: { id },
+    data: { assigned_to_id: parsed.data.assigned_to_id },
+    include: {
+      lead: { select: { id: true, first_name: true, last_name: true } },
+      assigned_to: { select: { id: true, first_name: true, last_name: true } },
+    },
+  });
+
+  await incrementAssignmentCount(parsed.data.assigned_to_id, "analysis");
 
   return c.json(updated);
 });

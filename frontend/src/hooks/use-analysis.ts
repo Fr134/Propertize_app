@@ -4,9 +4,17 @@ import type { SubmitAnalysisInput, UpdateAnalysisInput } from "@/lib/validators"
 
 // --- Types ---
 
+interface AssignedUser {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
 export interface AnalysisListItem {
   id: string;
   lead_id: string | null;
+  assigned_to_id: string | null;
+  assigned_to: AssignedUser | null;
   client_name: string;
   client_email: string;
   client_phone: string | null;
@@ -81,6 +89,23 @@ export function useLinkAnalysisLead(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["analyses"] });
       queryClient.invalidateQueries({ queryKey: ["analyses", id] });
+    },
+  });
+}
+
+export function useReassignAnalysis(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (assigned_to_id: string) =>
+      fetchJson<AnalysisListItem>(`/api/analysis/${id}/reassign`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assigned_to_id }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["analyses"] });
+      queryClient.invalidateQueries({ queryKey: ["analyses", id] });
+      queryClient.invalidateQueries({ queryKey: ["team"] });
     },
   });
 }

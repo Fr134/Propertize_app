@@ -3,10 +3,17 @@ import { fetchJson } from "@/lib/fetch";
 
 // --- Types ---
 
+interface AssignedUser {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
 export interface OnboardingListItem {
   id: string;
   owner_id: string;
   owner: { id: string; name: string; email: string | null; phone: string | null };
+  assigned_to: AssignedUser | null;
   started_at: string;
   completed_at: string | null;
   notes: string | null;
@@ -29,6 +36,7 @@ export interface OnboardingDetail {
   id: string;
   owner_id: string;
   owner: { id: string; name: string; email: string | null; phone: string | null };
+  assigned_to: AssignedUser | null;
   started_at: string;
   completed_at: string | null;
   notes: string | null;
@@ -85,6 +93,23 @@ export function useUpdateOnboardingStep(ownerId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["onboarding", ownerId] });
       queryClient.invalidateQueries({ queryKey: ["onboarding"] });
+    },
+  });
+}
+
+export function useReassignOnboarding(ownerId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (assigned_to_id: string) =>
+      fetchJson<OnboardingDetail>(`/api/onboarding/${ownerId}/reassign`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assigned_to_id }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["onboarding", ownerId] });
+      queryClient.invalidateQueries({ queryKey: ["onboarding"] });
+      queryClient.invalidateQueries({ queryKey: ["team"] });
     },
   });
 }

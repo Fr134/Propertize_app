@@ -177,6 +177,12 @@ model User {
   // Account status
   active                 Boolean @default(true)
 
+  // Assignment round-robin counters
+  leads_assignment_count      Int @default(0)
+  analysis_assignment_count   Int @default(0)
+  operations_assignment_count Int @default(0)
+  onboarding_assignment_count Int @default(0)
+
   // Operator future: property restrictions (predisposition only)
   allowed_property_ids   Json?   // null = all properties
 
@@ -188,6 +194,9 @@ model User {
   reopened_tasks   Task[]              @relation("ReopenedTasks")
   reports_created  MaintenanceReport[]
   expenses_created Expense[]
+  assigned_leads               Lead[]               @relation("AssignedLeads")
+  assigned_analyses            PropertyAnalysis[]   @relation("AssignedAnalyses")
+  assigned_onboarding_workflows OnboardingWorkflow[] @relation("AssignedOnboarding")
 
   @@map("users")
 }
@@ -735,14 +744,16 @@ model Lead {
   property_address String?
   property_type    PropertyType?
   estimated_rooms  Int?
+  assigned_to_id   String?       @db.Uuid
   created_at       DateTime      @default(now())
   updated_at       DateTime      @updatedAt
   converted_at     DateTime?
   owner_id         String?       @unique @db.Uuid
 
-  owner    Owner?              @relation(fields: [owner_id], references: [id])
-  calls    Call[]
-  analyses PropertyAnalysis[]
+  owner       Owner?              @relation(fields: [owner_id], references: [id])
+  assigned_to User?               @relation("AssignedLeads", fields: [assigned_to_id], references: [id])
+  calls       Call[]
+  analyses    PropertyAnalysis[]
 
   @@map("leads")
 }
@@ -762,6 +773,7 @@ model Call {
 model PropertyAnalysis {
   id              String         @id @default(uuid()) @db.Uuid
   lead_id         String?        @db.Uuid
+  assigned_to_id  String?        @db.Uuid
   // Client submitted data
   client_name     String
   client_email    String
@@ -792,7 +804,8 @@ model PropertyAnalysis {
   sent_at         DateTime?
   token           String         @unique @default(uuid())
   // Relations
-  lead Lead? @relation(fields: [lead_id], references: [id])
+  lead        Lead? @relation(fields: [lead_id], references: [id])
+  assigned_to User? @relation("AssignedAnalyses", fields: [assigned_to_id], references: [id])
 
   @@map("property_analyses")
 }
@@ -802,15 +815,17 @@ model PropertyAnalysis {
 // ============================================
 
 model OnboardingWorkflow {
-  id           String    @id @default(uuid()) @db.Uuid
-  owner_id     String    @unique @db.Uuid
-  started_at   DateTime  @default(now())
-  completed_at DateTime?
-  notes        String?
-  updated_at   DateTime  @updatedAt
+  id              String    @id @default(uuid()) @db.Uuid
+  owner_id        String    @unique @db.Uuid
+  assigned_to_id  String?   @db.Uuid
+  started_at      DateTime  @default(now())
+  completed_at    DateTime?
+  notes           String?
+  updated_at      DateTime  @updatedAt
 
-  owner Owner            @relation(fields: [owner_id], references: [id])
-  steps OnboardingStep[]
+  owner       Owner            @relation(fields: [owner_id], references: [id])
+  assigned_to User?            @relation("AssignedOnboarding", fields: [assigned_to_id], references: [id])
+  steps       OnboardingStep[]
 
   @@map("onboarding_workflows")
 }

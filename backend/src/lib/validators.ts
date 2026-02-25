@@ -783,3 +783,13 @@ export const resetPasswordSchema = z.object({
 });
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+// ============================================
+// Reassignment
+// ============================================
+
+export const reassignSchema = z.object({
+  assigned_to_id: z.string().uuid(),
+});
+
+export type ReassignInput = z.infer<typeof reassignSchema>;

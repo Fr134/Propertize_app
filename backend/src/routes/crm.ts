@@ -2,8 +2,9 @@ import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
 import { requirePermission } from "../middleware/permissions";
-import { createLeadSchema, updateLeadSchema, createCallSchema } from "../lib/validators";
+import { createLeadSchema, updateLeadSchema, createCallSchema, reassignSchema } from "../lib/validators";
 import { DEFAULT_ONBOARDING_STEPS } from "../lib/onboarding-defaults";
+import { getNextAssignee, incrementAssignmentCount, decrementAssignmentCount } from "../lib/assignment";
 import type { AppEnv } from "../types";
 import type { LeadStatus } from "@prisma/client";
 
@@ -21,6 +22,7 @@ router.get("/leads", auth, async (c) => {
     include: {
       _count: { select: { calls: true } },
       owner: { select: { id: true, name: true } },
+      assigned_to: { select: { id: true, first_name: true, last_name: true } },
     },
   });
 
@@ -35,6 +37,9 @@ router.post("/leads", auth, requireManager, requirePermission("can_manage_leads"
     return c.json({ error: parsed.error.issues[0].message }, 400);
   }
 
+  // Auto-assign via round-robin
+  const assigneeId = await getNextAssignee("leads");
+
   const lead = await prisma.lead.create({
     data: {
       first_name: parsed.data.first_name,
@@ -47,12 +52,18 @@ router.post("/leads", auth, requireManager, requirePermission("can_manage_leads"
       property_address: parsed.data.property_address || null,
       property_type: parsed.data.property_type ?? null,
       estimated_rooms: parsed.data.estimated_rooms ?? null,
+      assigned_to_id: assigneeId,
     },
     include: {
       _count: { select: { calls: true } },
       owner: { select: { id: true, name: true } },
+      assigned_to: { select: { id: true, first_name: true, last_name: true } },
     },
   });
+
+  if (assigneeId) {
+    await incrementAssignmentCount(assigneeId, "leads");
+  }
 
   return c.json(lead, 201);
 });
@@ -66,6 +77,7 @@ router.get("/leads/:id", auth, async (c) => {
     include: {
       calls: { orderBy: { called_at: "desc" } },
       owner: { select: { id: true, name: true } },
+      assigned_to: { select: { id: true, first_name: true, last_name: true } },
       analyses: {
         orderBy: { submitted_at: "desc" },
         select: {
@@ -105,6 +117,10 @@ router.patch("/leads/:id", auth, requireManager, requirePermission("can_manage_l
     );
   }
 
+  // Decrement assignment count when lead is marked as LOST
+  const isBecomingLost =
+    parsed.data.status === "LOST" && existing.status !== "LOST";
+
   const updated = await prisma.lead.update({
     where: { id },
     data: {
@@ -117,8 +133,13 @@ router.patch("/leads/:id", auth, requireManager, requirePermission("can_manage_l
     include: {
       _count: { select: { calls: true } },
       owner: { select: { id: true, name: true } },
+      assigned_to: { select: { id: true, first_name: true, last_name: true } },
     },
   });
+
+  if (isBecomingLost && existing.assigned_to_id) {
+    await decrementAssignmentCount(existing.assigned_to_id, "leads");
+  }
 
   return c.json(updated);
 });
@@ -136,9 +157,15 @@ router.delete("/leads/:id", auth, requireManager, requirePermission("can_manage_
   if (lead._count.calls > 0) {
     // Soft delete: set status to LOST
     await prisma.lead.update({ where: { id }, data: { status: "LOST" } });
+    if (lead.assigned_to_id) {
+      await decrementAssignmentCount(lead.assigned_to_id, "leads");
+    }
     return c.json({ message: "Lead segnato come perso (ha chiamate collegate)" });
   }
 
+  if (lead.assigned_to_id) {
+    await decrementAssignmentCount(lead.assigned_to_id, "leads");
+  }
   await prisma.lead.delete({ where: { id } });
   return c.json({ message: "Lead eliminato" });
 });
@@ -180,6 +207,9 @@ router.post("/leads/:id/convert", auth, requireManager, requirePermission("can_m
     return c.json({ error: "Lead già convertito in proprietario" }, 400);
   }
 
+  // Auto-assign onboarding via round-robin
+  const onboardingAssigneeId = await getNextAssignee("onboarding");
+
   const result = await prisma.$transaction(async (tx) => {
     const owner = await tx.owner.create({
       data: {
@@ -202,6 +232,7 @@ router.post("/leads/:id/convert", auth, requireManager, requirePermission("can_m
     await tx.onboardingWorkflow.create({
       data: {
         owner_id: owner.id,
+        assigned_to_id: onboardingAssigneeId,
         steps: {
           create: DEFAULT_ONBOARDING_STEPS.map((s) => ({
             step_key: s.step_key,
@@ -227,7 +258,61 @@ router.post("/leads/:id/convert", auth, requireManager, requirePermission("can_m
     return owner;
   });
 
+  if (onboardingAssigneeId) {
+    await incrementAssignmentCount(onboardingAssigneeId, "onboarding");
+  }
+
+  // Decrement leads count since lead is now WON/converted
+  if (lead.assigned_to_id) {
+    await decrementAssignmentCount(lead.assigned_to_id, "leads");
+  }
+
   return c.json({ owner_id: result.id, owner_name: result.name });
+});
+
+// PATCH /api/crm/leads/:id/reassign (MANAGER only)
+router.patch("/leads/:id/reassign", auth, requireManager, requirePermission("can_manage_leads"), async (c) => {
+  const id = c.req.param("id");
+
+  const lead = await prisma.lead.findUnique({ where: { id } });
+  if (!lead) return c.json({ error: "Lead non trovato" }, 404);
+
+  const body = await c.req.json();
+  const parsed = reassignSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.issues[0].message }, 400);
+  }
+
+  // Verify target user exists and has permission
+  const targetUser = await prisma.user.findUnique({
+    where: { id: parsed.data.assigned_to_id },
+  });
+  if (!targetUser || !targetUser.active || targetUser.role !== "MANAGER") {
+    return c.json({ error: "Utente non valido" }, 400);
+  }
+  if (!targetUser.is_super_admin && !targetUser.can_manage_leads) {
+    return c.json({ error: "L'utente non ha il permesso CRM" }, 400);
+  }
+
+  // Decrement old assignee count
+  if (lead.assigned_to_id) {
+    await decrementAssignmentCount(lead.assigned_to_id, "leads");
+  }
+
+  // Assign to new user
+  const updated = await prisma.lead.update({
+    where: { id },
+    data: { assigned_to_id: parsed.data.assigned_to_id },
+    include: {
+      _count: { select: { calls: true } },
+      owner: { select: { id: true, name: true } },
+      assigned_to: { select: { id: true, first_name: true, last_name: true } },
+    },
+  });
+
+  await incrementAssignmentCount(parsed.data.assigned_to_id, "leads");
+
+  return c.json(updated);
 });
 
 export default router;

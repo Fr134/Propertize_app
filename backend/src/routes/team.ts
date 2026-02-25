@@ -30,6 +30,10 @@ const USER_SELECT = {
   can_manage_team: true,
   can_manage_onboarding: true,
   is_super_admin: true,
+  leads_assignment_count: true,
+  analysis_assignment_count: true,
+  operations_assignment_count: true,
+  onboarding_assignment_count: true,
   created_at: true,
 } as const;
 

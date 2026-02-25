@@ -21,9 +21,11 @@ import {
   useAnalysis,
   useUpdateAnalysis,
   useLinkAnalysisLead,
+  useReassignAnalysis,
 } from "@/hooks/use-analysis";
 import { useLeads } from "@/hooks/use-leads";
 import { useUploadThing } from "@/lib/uploadthing-client";
+import { ReassignSelect } from "@/components/manager/reassign-select";
 
 const PROPERTY_TYPE_LABELS: Record<string, string> = {
   APPARTAMENTO: "Appartamento",
@@ -53,6 +55,7 @@ export default function AnalysisDetailPage({
   const { data: analysis, isLoading } = useAnalysis(id);
   const updateAnalysis = useUpdateAnalysis(id);
   const linkLead = useLinkAnalysisLead(id);
+  const reassignAnalysis = useReassignAnalysis(id);
   const { data: leads = [] } = useLeads();
 
   const [form, setForm] = useState({
@@ -181,6 +184,17 @@ export default function AnalysisDetailPage({
               </>
             )}
           </p>
+          <ReassignSelect
+            currentAssignee={analysis.assigned_to}
+            permissionField="can_do_analysis"
+            onReassign={(userId) => {
+              reassignAnalysis.mutate(userId, {
+                onError: (err) =>
+                  toast({ title: "Errore", description: err.message, variant: "destructive" }),
+              });
+            }}
+            isPending={reassignAnalysis.isPending}
+          />
         </div>
       </div>
 

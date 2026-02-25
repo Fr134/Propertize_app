@@ -46,6 +46,29 @@ function PermissionBadges({ member }: { member: TeamMember }) {
   );
 }
 
+function WorkloadBadges({ member }: { member: TeamMember }) {
+  const items = [
+    { label: "CRM", count: member.leads_assignment_count, className: "bg-blue-50 text-blue-700" },
+    { label: "Analisi", count: member.analysis_assignment_count, className: "bg-purple-50 text-purple-700" },
+    { label: "Ops", count: member.operations_assignment_count, className: "bg-green-50 text-green-700" },
+    { label: "Onb", count: member.onboarding_assignment_count, className: "bg-teal-50 text-teal-700" },
+  ].filter((i) => i.count > 0);
+
+  if (items.length === 0) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {items.map((i) => (
+        <Badge key={i.label} variant="secondary" className={`${i.className} text-xs`}>
+          {i.label} {i.count}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
 function TeamTable({ members, showPermissions }: { members: TeamMember[]; showPermissions: boolean }) {
   if (members.length === 0) {
     return <p className="text-sm text-muted-foreground py-4">Nessun membro</p>;
@@ -59,6 +82,7 @@ function TeamTable({ members, showPermissions }: { members: TeamMember[]; showPe
           <TableHead>Email</TableHead>
           <TableHead>Telefono</TableHead>
           {showPermissions && <TableHead>Permessi</TableHead>}
+          {showPermissions && <TableHead>Carico attivo</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -77,6 +101,11 @@ function TeamTable({ members, showPermissions }: { members: TeamMember[]; showPe
             {showPermissions && (
               <TableCell>
                 <PermissionBadges member={m} />
+              </TableCell>
+            )}
+            {showPermissions && (
+              <TableCell>
+                <WorkloadBadges member={m} />
               </TableCell>
             )}
           </TableRow>

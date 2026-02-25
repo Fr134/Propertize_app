@@ -46,7 +46,9 @@ import {
   useUpdateLead,
   useCreateCall,
   useConvertLead,
+  useReassignLead,
 } from "@/hooks/use-leads";
+import { ReassignSelect } from "@/components/manager/reassign-select";
 import {
   LEAD_STATUS_LABELS,
   LEAD_STATUS_COLORS,
@@ -66,6 +68,7 @@ export default function LeadDetailPage({
   const updateLead = useUpdateLead(id);
   const createCall = useCreateCall(id);
   const convertLead = useConvertLead(id);
+  const reassignLead = useReassignLead(id);
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -200,6 +203,17 @@ export default function LeadDetailPage({
             Creato il{" "}
             {new Date(lead.created_at).toLocaleDateString("it-IT")}
           </p>
+          <ReassignSelect
+            currentAssignee={lead.assigned_to}
+            permissionField="can_manage_leads"
+            onReassign={(userId) => {
+              reassignLead.mutate(userId, {
+                onError: (err) =>
+                  toast({ title: "Errore", description: err.message, variant: "destructive" }),
+              });
+            }}
+            isPending={reassignLead.isPending}
+          />
         </div>
         {!editing && (
           <Button variant="outline" size="sm" onClick={startEdit}>

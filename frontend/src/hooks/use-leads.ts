@@ -4,6 +4,12 @@ import type { CreateLeadInput, UpdateLeadInput, CreateCallInput } from "@/lib/va
 
 // --- Types ---
 
+interface AssignedUser {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
 interface LeadListItem {
   id: string;
   first_name: string;
@@ -16,6 +22,8 @@ interface LeadListItem {
   property_address: string | null;
   property_type: string | null;
   estimated_rooms: number | null;
+  assigned_to_id: string | null;
+  assigned_to: AssignedUser | null;
   created_at: string;
   updated_at: string;
   converted_at: string | null;
@@ -44,6 +52,7 @@ interface LeadAnalysisItem {
 interface LeadDetail extends Omit<LeadListItem, "_count"> {
   calls: CallItem[];
   owner: { id: string; name: string } | null;
+  assigned_to: AssignedUser | null;
   analyses: LeadAnalysisItem[];
 }
 
@@ -135,6 +144,23 @@ export function useConvertLead(id: string) {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       queryClient.invalidateQueries({ queryKey: ["leads", id] });
       queryClient.invalidateQueries({ queryKey: ["owners"] });
+    },
+  });
+}
+
+export function useReassignLead(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (assigned_to_id: string) =>
+      fetchJson<LeadListItem>(`/api/crm/leads/${id}/reassign`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assigned_to_id }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads", id] });
+      queryClient.invalidateQueries({ queryKey: ["team"] });
     },
   });
 }
