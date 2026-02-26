@@ -1,29 +1,16 @@
 import { Hono } from "hono";
-import { Resend } from "resend";
 import ExcelJS from "exceljs";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
 import { requirePermission } from "../middleware/permissions";
 import { submitAnalysisSchema, updateAnalysisSchema, reassignSchema } from "../lib/validators";
 import { getNextAssignee, incrementAssignmentCount, decrementAssignmentCount } from "../lib/assignment";
+import { sendEmail, MANAGER_EMAIL, translatePropertyType } from "../lib/email";
+import { newAnalysisSubmitted, analysisCompleted } from "../lib/email-templates";
 import type { AppEnv } from "../types";
 import type { AnalysisStatus } from "@prisma/client";
 
 const router = new Hono<AppEnv>();
-
-function getResend(): Resend | null {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return null;
-  return new Resend(key);
-}
-const MANAGER_EMAIL = process.env.MANAGER_EMAIL || "";
-const FROM_EMAIL = process.env.FROM_EMAIL || "Propertize <onboarding@resend.dev>";
-
-const PROPERTY_TYPE_LABELS: Record<string, string> = {
-  APPARTAMENTO: "Appartamento",
-  VILLA: "Villa",
-  ALTRO: "Altro",
-};
 
 // POST /api/analysis/submit (PUBLIC — no auth)
 router.post("/submit", async (c) => {
@@ -71,31 +58,36 @@ router.post("/submit", async (c) => {
     await incrementAssignmentCount(assigneeId, "analysis");
   }
 
-  // Send email notification to manager
-  const resendClient = getResend();
-  if (MANAGER_EMAIL && resendClient) {
-    try {
-      await resendClient.emails.send({
-        from: FROM_EMAIL,
-        to: MANAGER_EMAIL,
-        subject: `Nuova richiesta analisi — ${parsed.data.client_name} — ${parsed.data.property_address}`,
-        html: `
-          <h2>Nuova richiesta di analisi immobile</h2>
-          <p><strong>Cliente:</strong> ${parsed.data.client_name}</p>
-          <p><strong>Email:</strong> ${parsed.data.client_email}</p>
-          ${parsed.data.client_phone ? `<p><strong>Telefono:</strong> ${parsed.data.client_phone}</p>` : ""}
-          <hr/>
-          <p><strong>Indirizzo:</strong> ${parsed.data.property_address}</p>
-          <p><strong>Tipo:</strong> ${PROPERTY_TYPE_LABELS[parsed.data.property_type] ?? parsed.data.property_type}</p>
-          <p><strong>Camere:</strong> ${parsed.data.bedroom_count} | <strong>Bagni:</strong> ${parsed.data.bathroom_count}</p>
-          ${parsed.data.floor_area_sqm ? `<p><strong>Superficie:</strong> ${parsed.data.floor_area_sqm} mq</p>` : ""}
-          ${parsed.data.current_use ? `<p><strong>Utilizzo attuale:</strong> ${parsed.data.current_use}</p>` : ""}
-          <hr/>
-          <p><a href="${process.env.FRONTEND_URL}/manager/crm/analisi/${analysis.id}">Visualizza nell'app</a></p>
-        `,
+  // Send email notification to manager + assignee
+  if (MANAGER_EMAIL) {
+    let assigneeName: string | null = null;
+    let assigneeEmail: string | null = null;
+    if (assigneeId) {
+      const a = await prisma.user.findUnique({
+        where: { id: assigneeId },
+        select: { first_name: true, last_name: true, email: true },
       });
-    } catch (err) {
-      console.error("Failed to send manager notification email:", err);
+      if (a) {
+        assigneeName = `${a.first_name} ${a.last_name}`;
+        assigneeEmail = a.email;
+      }
+    }
+    const tpl = newAnalysisSubmitted({
+      clientName: parsed.data.client_name,
+      clientEmail: parsed.data.client_email,
+      clientPhone: parsed.data.client_phone || null,
+      propertyAddress: parsed.data.property_address,
+      propertyType: parsed.data.property_type,
+      bedroomCount: parsed.data.bedroom_count,
+      bathroomCount: parsed.data.bathroom_count,
+      floorAreaSqm: parsed.data.floor_area_sqm ?? null,
+      currentUse: parsed.data.current_use || null,
+      analysisId: analysis.id,
+      assigneeName,
+    });
+    sendEmail({ to: MANAGER_EMAIL, ...tpl });
+    if (assigneeEmail && assigneeEmail !== MANAGER_EMAIL) {
+      sendEmail({ to: assigneeEmail, ...tpl });
     }
   }
 
@@ -160,7 +152,7 @@ router.get("/export", auth, requireManager, async (c) => {
       client_email: a.client_email,
       client_phone: a.client_phone ?? "",
       property_address: a.property_address,
-      property_type: PROPERTY_TYPE_LABELS[a.property_type] ?? a.property_type,
+      property_type: translatePropertyType(a.property_type),
       bedroom_count: a.bedroom_count,
       bathroom_count: a.bathroom_count,
       floor_area_sqm: a.floor_area_sqm ?? "",
@@ -232,38 +224,16 @@ router.patch("/:id", auth, requireManager, requirePermission("can_do_analysis"),
 
   // Send email to client when completing
   if (isCompleting) {
-    const resendForClient = getResend();
-    if (resendForClient) try {
-      const revenueText =
-        updated.estimated_revenue_low && updated.estimated_revenue_high
-          ? `€${Number(updated.estimated_revenue_low).toLocaleString("it-IT")} - €${Number(updated.estimated_revenue_high).toLocaleString("it-IT")}`
-          : "Da definire";
-      const occupancyText = updated.estimated_occupancy
-        ? `${updated.estimated_occupancy}%`
-        : "Da definire";
-
-      await resendForClient.emails.send({
-        from: FROM_EMAIL,
-        to: updated.client_email,
-        subject: "La tua analisi immobile è pronta — Propertize",
-        html: `
-          <h2>La tua analisi immobile è pronta!</h2>
-          <p>Gentile ${updated.client_name},</p>
-          <p>Abbiamo completato l'analisi del tuo immobile in <strong>${updated.property_address}</strong>.</p>
-          <hr/>
-          <h3>Riepilogo</h3>
-          <p><strong>Revenue stimata annuale:</strong> ${revenueText}</p>
-          <p><strong>Occupancy stimata:</strong> ${occupancyText}</p>
-          ${updated.analysis_notes ? `<p><strong>Note:</strong> ${updated.analysis_notes}</p>` : ""}
-          ${updated.analysis_file_url ? `<p><a href="${updated.analysis_file_url}">Scarica il documento di analisi</a></p>` : ""}
-          <hr/>
-          <p>Per qualsiasi domanda, non esitare a contattarci.</p>
-          <p>Il team Propertize</p>
-        `,
-      });
-    } catch (err) {
-      console.error("Failed to send client completion email:", err);
-    }
+    const tpl = analysisCompleted({
+      clientName: updated.client_name,
+      propertyAddress: updated.property_address,
+      estimatedRevenueLow: updated.estimated_revenue_low ? Number(updated.estimated_revenue_low) : null,
+      estimatedRevenueHigh: updated.estimated_revenue_high ? Number(updated.estimated_revenue_high) : null,
+      estimatedOccupancy: updated.estimated_occupancy,
+      analysisNotes: updated.analysis_notes ?? null,
+      analysisFileUrl: updated.analysis_file_url ?? null,
+    });
+    sendEmail({ to: updated.client_email, ...tpl });
   }
 
   return c.json(updated);

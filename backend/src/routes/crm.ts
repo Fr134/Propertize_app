@@ -5,6 +5,8 @@ import { requirePermission } from "../middleware/permissions";
 import { createLeadSchema, updateLeadSchema, createCallSchema, reassignSchema } from "../lib/validators";
 import { DEFAULT_ONBOARDING_STEPS } from "../lib/onboarding-defaults";
 import { getNextAssignee, incrementAssignmentCount, decrementAssignmentCount } from "../lib/assignment";
+import { sendEmail } from "../lib/email";
+import { newLeadAssigned, leadConverted } from "../lib/email-templates";
 import type { AppEnv } from "../types";
 import type { LeadStatus } from "@prisma/client";
 
@@ -63,6 +65,27 @@ router.post("/leads", auth, requireManager, requirePermission("can_manage_leads"
 
   if (assigneeId) {
     await incrementAssignmentCount(assigneeId, "leads");
+  }
+
+  // Notify assigned manager
+  if (assigneeId) {
+    const a = await prisma.user.findUnique({
+      where: { id: assigneeId },
+      select: { email: true, first_name: true, last_name: true },
+    });
+    if (a?.email) {
+      const tpl = newLeadAssigned({
+        assigneeName: `${a.first_name} ${a.last_name}`,
+        leadFirstName: parsed.data.first_name,
+        leadLastName: parsed.data.last_name,
+        leadEmail: parsed.data.email || null,
+        leadPhone: parsed.data.phone || null,
+        propertyAddress: parsed.data.property_address || null,
+        source: parsed.data.source,
+        leadId: lead.id,
+      });
+      sendEmail({ to: a.email, ...tpl });
+    }
   }
 
   return c.json(lead, 201);
@@ -265,6 +288,25 @@ router.post("/leads/:id/convert", auth, requireManager, requirePermission("can_m
   // Decrement leads count since lead is now WON/converted
   if (lead.assigned_to_id) {
     await decrementAssignmentCount(lead.assigned_to_id, "leads");
+  }
+
+  // Notify onboarding assignee
+  if (onboardingAssigneeId) {
+    const a = await prisma.user.findUnique({
+      where: { id: onboardingAssigneeId },
+      select: { email: true, first_name: true, last_name: true },
+    });
+    if (a?.email) {
+      const tpl = leadConverted({
+        assigneeName: `${a.first_name} ${a.last_name}`,
+        ownerName: result.name,
+        leadFirstName: lead.first_name,
+        leadLastName: lead.last_name,
+        leadEmail: lead.email,
+        ownerId: result.id,
+      });
+      sendEmail({ to: a.email, ...tpl });
+    }
   }
 
   return c.json({ owner_id: result.id, owner_name: result.name });

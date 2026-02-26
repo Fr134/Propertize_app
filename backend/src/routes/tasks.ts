@@ -12,6 +12,8 @@ import {
   updateTaskSupplyUsageSchema,
 } from "../lib/validators";
 import { postConsumptionTx } from "../lib/inventory";
+import { sendEmail } from "../lib/email";
+import { taskAssigned, taskApproved, taskRejected, taskReopened } from "../lib/email-templates";
 import type { AppEnv } from "../types";
 
 const router = new Hono<AppEnv>();
@@ -200,7 +202,7 @@ router.post("/", auth, requireManager, requirePermission("can_manage_operations"
       },
       include: {
         property: { select: { id: true, name: true, code: true } },
-        operator: { select: { id: true, first_name: true, last_name: true } },
+        operator: { select: { id: true, first_name: true, last_name: true, email: true } },
         external_assignee: { select: { id: true, name: true, company: true, phone: true } },
       },
     });
@@ -218,6 +220,21 @@ router.post("/", auth, requireManager, requirePermission("can_manage_operations"
 
     return created;
   });
+
+  // Notify operator
+  if (task.operator?.email) {
+    const tpl = taskAssigned({
+      operatorName: `${task.operator.first_name} ${task.operator.last_name}`,
+      propertyName: task.property.name,
+      propertyCode: task.property.code,
+      taskType: task.task_type,
+      scheduledDate: task.scheduled_date,
+      startTime: task.start_time,
+      notes: task.notes ?? null,
+      taskId: task.id,
+    });
+    sendEmail({ to: task.operator.email, ...tpl });
+  }
 
   return c.json(task, 201);
 });
@@ -621,7 +638,7 @@ router.patch("/:id/review", auth, requireManager, requirePermission("can_manage_
       },
       include: {
         property: { select: { id: true, name: true, code: true } },
-        operator: { select: { id: true, first_name: true, last_name: true } },
+        operator: { select: { id: true, first_name: true, last_name: true, email: true } },
       },
     });
 
@@ -631,6 +648,36 @@ router.patch("/:id/review", auth, requireManager, requirePermission("can_manage_
 
     return updated;
   });
+
+  // Notify operator
+  if (updatedTask.operator?.email) {
+    if (parsed.data.status === "APPROVED") {
+      sendEmail({
+        to: updatedTask.operator.email,
+        ...taskApproved({
+          operatorName: `${updatedTask.operator.first_name} ${updatedTask.operator.last_name}`,
+          propertyName: updatedTask.property.name,
+          propertyCode: updatedTask.property.code,
+          taskType: updatedTask.task_type,
+          scheduledDate: updatedTask.scheduled_date,
+          taskId: updatedTask.id,
+        }),
+      });
+    } else if (parsed.data.status === "REJECTED") {
+      sendEmail({
+        to: updatedTask.operator.email,
+        ...taskRejected({
+          operatorName: `${updatedTask.operator.first_name} ${updatedTask.operator.last_name}`,
+          propertyName: updatedTask.property.name,
+          propertyCode: updatedTask.property.code,
+          taskType: updatedTask.task_type,
+          scheduledDate: updatedTask.scheduled_date,
+          rejectionNotes: parsed.data.notes ?? null,
+          taskId: updatedTask.id,
+        }),
+      });
+    }
+  }
 
   return c.json(updatedTask);
 });
@@ -676,9 +723,25 @@ router.patch("/:id/reopen", auth, requireManager, requirePermission("can_manage_
     where: { id },
     include: {
       property: { select: { id: true, name: true, code: true } },
-      operator: { select: { id: true, first_name: true, last_name: true } },
+      operator: { select: { id: true, first_name: true, last_name: true, email: true } },
     },
   });
+
+  // Notify operator
+  if (updatedTask?.operator?.email) {
+    sendEmail({
+      to: updatedTask.operator.email,
+      ...taskReopened({
+        operatorName: `${updatedTask.operator.first_name} ${updatedTask.operator.last_name}`,
+        propertyName: updatedTask.property.name,
+        propertyCode: updatedTask.property.code,
+        taskType: updatedTask.task_type,
+        scheduledDate: updatedTask.scheduled_date,
+        reopenNote: parsed.data.note,
+        taskId: updatedTask.id,
+      }),
+    });
+  }
 
   return c.json(updatedTask);
 });

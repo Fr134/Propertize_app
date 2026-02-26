@@ -1,21 +1,14 @@
 import { Hono } from "hono";
-import { Resend } from "resend";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
 import { requirePermission } from "../middleware/permissions";
 import { onboardingFileSchema } from "../lib/validators";
+import { sendEmail, MANAGER_EMAIL } from "../lib/email";
+import { onboardingFileSubmitted } from "../lib/email-templates";
 import type { AppEnv } from "../types";
 import type { Prisma } from "@prisma/client";
 
 const router = new Hono<AppEnv>();
-
-function getResend(): Resend | null {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return null;
-  return new Resend(key);
-}
-const MANAGER_EMAIL = process.env.MANAGER_EMAIL || "";
-const FROM_EMAIL = process.env.FROM_EMAIL || "Propertize <onboarding@resend.dev>";
 
 // ============================================
 // Public endpoints (token-based, no auth)
@@ -202,25 +195,30 @@ router.post("/token/:token/submit", async (c) => {
     }
   });
 
-  // Send notification email to manager
-  const resendClient = getResend();
-  if (MANAGER_EMAIL && resendClient) {
-    try {
-      await resendClient.emails.send({
-        from: FROM_EMAIL,
-        to: MANAGER_EMAIL,
-        subject: `Onboarding file ricevuto - ${file.owner_first_name} ${file.owner_last_name}`,
-        html: `
-          <h2>Nuovo onboarding file ricevuto</h2>
-          <p><strong>Proprietario:</strong> ${file.owner_first_name} ${file.owner_last_name}</p>
-          <p><strong>Email:</strong> ${file.owner_email}</p>
-          <p><strong>Telefono:</strong> ${file.owner_phone}</p>
-          <p><strong>Immobile:</strong> ${file.property_address || "N/A"}</p>
-          <p>Accedi alla piattaforma per visualizzare i dettagli.</p>
-        `,
-      });
-    } catch (e) {
-      console.error("Failed to send onboarding notification email:", e);
+  // Send notification email to manager + assignee
+  if (MANAGER_EMAIL) {
+    let assigneeName: string | null = null;
+    let assigneeEmail: string | null = null;
+    const wf = await prisma.onboardingWorkflow.findUnique({
+      where: { owner_id: file.owner_id },
+      select: { assigned_to: { select: { first_name: true, last_name: true, email: true } } },
+    });
+    if (wf?.assigned_to) {
+      assigneeName = `${wf.assigned_to.first_name} ${wf.assigned_to.last_name}`;
+      assigneeEmail = wf.assigned_to.email;
+    }
+    const tpl = onboardingFileSubmitted({
+      ownerFirstName: file.owner_first_name ?? "",
+      ownerLastName: file.owner_last_name ?? "",
+      ownerEmail: file.owner_email ?? null,
+      ownerPhone: file.owner_phone ?? null,
+      propertyAddress: file.property_address ?? null,
+      ownerId: file.owner_id,
+      assigneeName,
+    });
+    sendEmail({ to: MANAGER_EMAIL, ...tpl });
+    if (assigneeEmail && assigneeEmail !== MANAGER_EMAIL) {
+      sendEmail({ to: assigneeEmail, ...tpl });
     }
   }
 

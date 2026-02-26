@@ -5,6 +5,8 @@ import { requirePermission } from "../middleware/permissions";
 import { DEFAULT_ONBOARDING_STEPS } from "../lib/onboarding-defaults";
 import { reassignSchema } from "../lib/validators";
 import { incrementAssignmentCount, decrementAssignmentCount } from "../lib/assignment";
+import { sendEmail, MANAGER_EMAIL } from "../lib/email";
+import { onboardingCompleted } from "../lib/email-templates";
 import type { AppEnv } from "../types";
 import type { OnboardingStepStatus } from "@prisma/client";
 
@@ -184,6 +186,10 @@ router.patch("/:ownerId/steps/:stepKey", auth, requireManager, requirePermission
 
   const workflow = await prisma.onboardingWorkflow.findUnique({
     where: { owner_id: ownerId },
+    include: {
+      owner: { select: { name: true, email: true } },
+      assigned_to: { select: { first_name: true, last_name: true, email: true } },
+    },
   });
   if (!workflow) return c.json({ error: "Workflow non trovato" }, 404);
 
@@ -222,6 +228,24 @@ router.patch("/:ownerId/steps/:stepKey", auth, requireManager, requirePermission
       where: { id: workflow.id },
       data: { completed_at: new Date() },
     });
+
+    // Send onboarding completed email
+    const assigneeName = workflow.assigned_to
+      ? `${workflow.assigned_to.first_name} ${workflow.assigned_to.last_name}`
+      : null;
+    const tpl = onboardingCompleted({
+      ownerName: workflow.owner?.name ?? "",
+      ownerEmail: workflow.owner?.email ?? null,
+      assigneeName,
+      ownerId,
+      completedAt: new Date(),
+    });
+    if (MANAGER_EMAIL) {
+      sendEmail({ to: MANAGER_EMAIL, ...tpl });
+    }
+    if (workflow.assigned_to?.email && workflow.assigned_to.email !== MANAGER_EMAIL) {
+      sendEmail({ to: workflow.assigned_to.email, ...tpl });
+    }
   } else if (!allDone && workflow.completed_at) {
     await prisma.onboardingWorkflow.update({
       where: { id: workflow.id },
