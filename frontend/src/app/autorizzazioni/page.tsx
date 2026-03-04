@@ -45,7 +45,13 @@ function getProgress(data: Record<string, unknown>): number {
   let filled = 0;
   for (const field of REQUIRED_FIELDS) {
     const val = data[field];
-    if (val !== null && val !== undefined && val !== "" && val !== 0) filled++;
+    if (val === null || val === undefined || val === "") continue;
+    // Numbers: 0 is a valid value for fields like n_camere
+    if (typeof val === "number") { filled++; continue; }
+    // Strings: non-empty after trimming
+    if (typeof val === "string" && val.trim() !== "") { filled++; continue; }
+    // Other truthy values
+    if (val) filled++;
   }
   return Math.round((filled / REQUIRED_FIELDS.length) * 100);
 }

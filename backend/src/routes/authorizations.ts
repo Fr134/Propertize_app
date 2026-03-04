@@ -265,6 +265,21 @@ router.post(
 
     const url = `${FRONTEND_URL}/autorizzazioni?token=${form.token}`;
 
+    // Auto-send email to owner
+    if (owner.email) {
+      sendEmail({
+        to: owner.email,
+        subject: "Compila il modulo di autorizzazione — Propertize",
+        html: `
+          <p>Ciao ${owner.name},</p>
+          <p>Per completare le autorizzazioni relative al tuo immobile, compila il seguente modulo:</p>
+          <p><a href="${url}" style="display:inline-block;padding:12px 24px;background:#0A6CFF;color:#fff;text-decoration:none;border-radius:6px;">Compila il modulo</a></p>
+          <p>Oppure copia questo link: ${url}</p>
+          <p>Cordiali saluti,<br/>Il team Propertize</p>
+        `,
+      }).catch(() => {});
+    }
+
     return c.json({ token: form.token, url });
   }
 );
