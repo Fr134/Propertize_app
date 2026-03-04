@@ -30,6 +30,7 @@ import {
   Phone,
   Copy,
   MessageCircle,
+  FileCheck,
 } from "lucide-react";
 import { useOnboarding, useUpdateOnboardingStep, useReassignOnboarding } from "@/hooks/use-onboarding";
 import { useOwner } from "@/hooks/use-owners";
@@ -199,6 +200,12 @@ export default function OnboardingDetailPage({
             isPending={reassignOnboarding.isPending}
           />
         </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/manager/crm/onboarding/${ownerId}/autorizzazioni`}>
+            <FileCheck className="mr-2 h-3.5 w-3.5" />
+            Autorizzazioni
+          </Link>
+        </Button>
         <Button variant="outline" size="sm" asChild>
           <Link href={`/manager/owners/${ownerId}`}>
             <User className="mr-2 h-3.5 w-3.5" />
