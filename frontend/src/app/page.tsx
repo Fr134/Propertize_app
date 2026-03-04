@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Image from "next/image";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -22,8 +23,15 @@ export default function Home() {
   return (
     <div className="flex min-h-screen items-center justify-center">
       <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight">Propertize</h1>
-        <p className="mt-2 text-lg text-muted-foreground">
+        <Image
+          src="/propertize-logo.png"
+          alt="Propertize"
+          width={320}
+          height={80}
+          className="h-16 w-auto mx-auto rounded-lg"
+          priority
+        />
+        <p className="mt-4 text-lg text-muted-foreground">
           Housekeeping Management App
         </p>
       </div>

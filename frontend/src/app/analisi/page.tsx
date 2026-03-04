@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSubmitAnalysis } from "@/hooks/use-analysis";
+import Image from "next/image";
 
 export default function AnalisiPage() {
   const router = useRouter();
@@ -72,14 +73,19 @@ export default function AnalisiPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <div className="mx-auto max-w-lg px-4 py-8 sm:py-12">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            Propertize
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <Image
+            src="/propertize-logo.png"
+            alt="Propertize"
+            width={240}
+            height={60}
+            className="h-14 w-auto mx-auto rounded-lg"
+            priority
+          />
+          <p className="mt-3 text-sm text-muted-foreground">
             Richiedi un&apos;analisi gratuita del potenziale del tuo immobile
           </p>
         </div>

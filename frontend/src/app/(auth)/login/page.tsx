@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,7 +45,14 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Propertize</CardTitle>
+          <Image
+            src="/propertize-logo.png"
+            alt="Propertize"
+            width={240}
+            height={60}
+            className="h-14 w-auto mx-auto rounded-lg"
+            priority
+          />
           <CardDescription>Accedi al tuo account</CardDescription>
         </CardHeader>
         <CardContent>

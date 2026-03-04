@@ -15,6 +15,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { SidebarNav } from "./sidebar-nav";
 import { LogOut, Menu } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 
 export function AppHeader() {
   const { data: session } = useSession();
@@ -39,7 +40,13 @@ export function AppHeader() {
         </SheetTrigger>
         <SheetContent side="left" className="w-60 p-0 pt-10">
           <div className="px-4 pb-4">
-            <h2 className="text-lg font-semibold">Propertize</h2>
+            <Image
+              src="/propertize-logo.png"
+              alt="Propertize"
+              width={160}
+              height={40}
+              className="h-8 w-auto rounded-lg"
+            />
           </div>
           <SidebarNav role={user.role} />
         </SheetContent>
