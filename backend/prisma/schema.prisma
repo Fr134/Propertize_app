@@ -197,6 +197,7 @@ model User {
   assigned_leads               Lead[]               @relation("AssignedLeads")
   assigned_analyses            PropertyAnalysis[]   @relation("AssignedAnalyses")
   assigned_onboarding_workflows OnboardingWorkflow[] @relation("AssignedOnboarding")
+  sent_documents                GeneratedDocument[]
 
   @@map("users")
 }
@@ -214,10 +215,11 @@ model Owner {
   contract_signed_at DateTime?
   created_at         DateTime  @default(now())
 
-  properties          Property[]
-  lead                Lead?
-  onboarding_workflow OnboardingWorkflow?
-  onboarding_file     OnboardingFile?
+  properties           Property[]
+  lead                 Lead?
+  onboarding_workflow  OnboardingWorkflow?
+  onboarding_file      OnboardingFile?
+  authorization_forms  AuthorizationForm[]
 
   @@map("owners")
 }
@@ -990,4 +992,82 @@ model OnboardingFile {
   owner Owner @relation(fields: [owner_id], references: [id])
 
   @@map("onboarding_files")
+}
+
+model PdfTemplate {
+  id            String   @id @default(uuid()) @db.Uuid
+  location      String
+  document_type String
+  label         String
+  template_url  String
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+
+  generated GeneratedDocument[]
+
+  @@unique([location, document_type])
+  @@map("pdf_templates")
+}
+
+model AuthorizationForm {
+  id           String    @id @default(uuid()) @db.Uuid
+  owner_id     String    @db.Uuid
+  token        String    @unique @default(uuid())
+  location     String
+  submitted_at DateTime?
+  created_at   DateTime  @default(now())
+
+  cognome             String?
+  nome                String?
+  nato_a              String?
+  nato_prov           String?
+  nato_il             DateTime?
+  codice_fiscale      String?
+  residente_a         String?
+  residente_cap       String?
+  indirizzo_res       String?
+  telefono            String?
+  email               String?
+  pec                 String?
+  ruolo               String?
+  immobile_via        String?
+  immobile_n          String?
+  immobile_indirizzo  String?
+  immobile_n2         String?
+  immobile_piano      String?
+  immobile_comune     String?
+  immobile_cap        String?
+  immobile_prov       String?
+  sezione             String?
+  foglio              String?
+  particella          String?
+  sub                 String?
+  categoria           String?
+  denominazione       String?
+  n_camere            Int?
+  n_bagni             Int?
+  n_posti_letto       Int?
+  periodo_disponibilita String?
+  luogo_data          String?
+
+  owner     Owner               @relation(fields: [owner_id], references: [id])
+  documents GeneratedDocument[]
+
+  @@map("authorization_forms")
+}
+
+model GeneratedDocument {
+  id                    String    @id @default(uuid()) @db.Uuid
+  authorization_form_id String    @db.Uuid
+  template_id           String    @db.Uuid
+  generated_url         String
+  generated_at          DateTime  @default(now())
+  sent_to_client_at     DateTime?
+  sent_by_id            String?   @db.Uuid
+
+  form     AuthorizationForm @relation(fields: [authorization_form_id], references: [id])
+  template PdfTemplate       @relation(fields: [template_id], references: [id])
+  sent_by  User?             @relation(fields: [sent_by_id], references: [id])
+
+  @@map("generated_documents")
 }
