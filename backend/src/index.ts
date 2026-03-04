@@ -23,6 +23,8 @@ import analysisRoutes from "./routes/analysis";
 import onboardingRoutes from "./routes/onboarding";
 import onboardingFileRoutes from "./routes/onboarding-file";
 import teamRoutes from "./routes/team";
+import authorizationsRoutes from "./routes/authorizations";
+import pdfTemplatesRoutes from "./routes/pdf-templates";
 
 const app = new Hono<AppEnv>();
 
@@ -59,6 +61,8 @@ api.route("/analysis", analysisRoutes);
 api.route("/onboarding", onboardingRoutes);
 api.route("/onboarding-file", onboardingFileRoutes);
 api.route("/team", teamRoutes);
+api.route("/authorizations", authorizationsRoutes);
+api.route("/pdf-templates", pdfTemplatesRoutes);
 
 app.route("/api", api);
 

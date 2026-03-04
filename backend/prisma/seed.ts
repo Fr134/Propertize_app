@@ -281,6 +281,24 @@ async function main() {
   });
   console.log("✅ Task KEY_HANDOVER (internal) creato");
 
+  // --- PdfTemplate ---
+  await prisma.pdfTemplate.upsert({
+    where: {
+      location_document_type: {
+        location: "Cagliari",
+        document_type: "comunicazione_locazione",
+      },
+    },
+    update: {},
+    create: {
+      location: "Cagliari",
+      document_type: "comunicazione_locazione",
+      label: "Comunicazione Locazione Occasionale — Comune di Cagliari",
+      template_url: "", // manager uploads real PDF via UI
+    },
+  });
+  console.log("✅ PdfTemplate: Cagliari comunicazione_locazione");
+
   console.log("\n🎉 Seed completato!");
   console.log("\nCredenziali:");
   console.log("Manager: manager@test.com / password123");
