@@ -89,7 +89,7 @@ export const ourFileRouter = {
       return { url: file.ufsUrl };
     }),
 
-  pdfTemplate: f({ pdf: { maxFileSize: "16MB", maxFileCount: 1 } })
+  pdfTemplate: f({ pdf: { maxFileSize: "8MB", maxFileCount: 1 } })
     .middleware(async () => {
       const { userId, role } = await requireSession();
       if (role !== "MANAGER") {
