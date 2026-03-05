@@ -15,12 +15,14 @@ import {
   Send,
   Loader2,
   Mail,
+  FileText,
 } from "lucide-react";
 import { useOwner } from "@/hooks/use-owners";
 import {
   useAuthFormByOwner,
   useSendAuthLink,
   useSendToClient,
+  useGeneratePdf,
 } from "@/hooks/use-authorizations";
 
 export default function AutorizzazioniManagerPage({
@@ -33,6 +35,7 @@ export default function AutorizzazioniManagerPage({
   const { data: form, isLoading, error } = useAuthFormByOwner(ownerId);
   const sendLink = useSendAuthLink(ownerId);
   const sendToClient = useSendToClient(ownerId);
+  const generatePdf = useGeneratePdf(ownerId);
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const [linkResult, setLinkResult] = useState<{ token: string; url: string } | null>(null);
@@ -79,6 +82,19 @@ export default function AutorizzazioniManagerPage({
       });
     }
   }, [sendToClient, ownerEmail, toast]);
+
+  const handleGeneratePdf = useCallback(async () => {
+    try {
+      await generatePdf.mutateAsync();
+      toast({ title: "PDF generato", description: "Il documento PDF è stato generato con successo" });
+    } catch (err) {
+      toast({
+        title: "Errore",
+        description: err instanceof Error ? err.message : "Errore generazione PDF",
+        variant: "destructive",
+      });
+    }
+  }, [generatePdf, toast]);
 
   if (isLoading) {
     return (
@@ -214,6 +230,22 @@ export default function AutorizzazioniManagerPage({
             ["Periodo", form.periodo_disponibilita],
             ["Luogo e data", form.luogo_data],
           ]} />
+
+          {/* Generate PDF button (when no documents yet) */}
+          {(!form.documents || form.documents.length === 0) && (
+            <Card>
+              <CardContent className="py-6 text-center space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Nessun documento generato. Assicurati di aver caricato un template PDF in Template PDF.
+                </p>
+                <Button onClick={handleGeneratePdf} disabled={generatePdf.isPending}>
+                  {generatePdf.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <FileText className="mr-2 h-4 w-4" />
+                  Genera PDF
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Generated documents */}
           {form.documents && form.documents.length > 0 && (

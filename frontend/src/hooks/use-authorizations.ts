@@ -158,6 +158,20 @@ export function useSendToClient(ownerId: string) {
   });
 }
 
+export function useGeneratePdf(ownerId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      fetchJson<{ success: boolean; generated_url: string }>(
+        `/api/authorizations/${ownerId}/generate-pdf`,
+        { method: "POST" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["authorization-form-owner", ownerId] });
+    },
+  });
+}
+
 // --- PDF Templates hooks ---
 
 export function usePdfTemplates() {

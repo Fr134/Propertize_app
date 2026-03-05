@@ -254,6 +254,94 @@ router.get("/:ownerId", auth, requireManager, async (c) => {
   return c.json(form);
 });
 
+// POST /api/authorizations/:ownerId/generate-pdf — manager triggers PDF generation
+router.post(
+  "/:ownerId/generate-pdf",
+  auth,
+  requireManager,
+  requirePermission("can_manage_onboarding"),
+  async (c) => {
+    const ownerId = c.req.param("ownerId");
+
+    const form = await prisma.authorizationForm.findFirst({
+      where: { owner_id: ownerId },
+    });
+
+    if (!form) return c.json({ error: "Nessun modulo trovato" }, 404);
+    if (!form.submitted_at) return c.json({ error: "Il modulo non è stato ancora compilato" }, 400);
+
+    // Find active PDF template for this location
+    const template = await prisma.pdfTemplate.findFirst({
+      where: {
+        location: form.location,
+        document_type: "comunicazione_locazione",
+        is_active: true,
+      },
+    });
+
+    if (!template || !template.template_url) {
+      return c.json({ error: "Nessun template PDF attivo per questa località" }, 400);
+    }
+
+    // Load template PDF (supports both data URIs and HTTP URLs)
+    let templateBytes: ArrayBuffer;
+    if (template.template_url.startsWith("data:")) {
+      const base64 = template.template_url.split(",")[1];
+      templateBytes = Buffer.from(base64, "base64").buffer;
+    } else {
+      const templateResponse = await fetch(template.template_url);
+      if (!templateResponse.ok) {
+        return c.json({ error: "Impossibile scaricare il template PDF" }, 500);
+      }
+      templateBytes = await templateResponse.arrayBuffer();
+    }
+
+    // Build form data from stored fields
+    const formData: Record<string, unknown> = {};
+    const fields = [
+      "cognome", "nome", "nato_a", "nato_prov", "nato_il",
+      "codice_fiscale", "residente_a", "residente_cap", "indirizzo_res",
+      "telefono", "email", "pec", "ruolo",
+      "immobile_via", "immobile_n", "immobile_indirizzo", "immobile_n2",
+      "immobile_piano", "immobile_comune", "immobile_cap", "immobile_prov",
+      "sezione", "foglio", "particella", "sub", "categoria",
+      "denominazione", "n_camere", "n_bagni", "n_posti_letto",
+      "periodo_disponibilita", "luogo_data",
+    ];
+    for (const key of fields) {
+      formData[key] = (form as Record<string, unknown>)[key] ?? null;
+    }
+
+    // Compile PDF
+    const pdfBytes = await compilePdf(templateBytes, formData, form.location);
+
+    // Upload compiled PDF via UTApi
+    const utapi = getUtApi();
+    const ownerName = form.cognome && form.nome ? `${form.nome}-${form.cognome}` : ownerId;
+    const fileName = `autorizzazione-${ownerName.replace(/\s+/g, "-").toLowerCase()}-${Date.now()}.pdf`;
+    const blob = new Blob([Buffer.from(pdfBytes)], { type: "application/pdf" });
+    const file = new File([blob], fileName, { type: "application/pdf" });
+    const uploadResult = await utapi.uploadFiles(file);
+
+    if (uploadResult.error) {
+      return c.json({ error: "Errore durante il caricamento del PDF" }, 500);
+    }
+
+    const generatedUrl = uploadResult.data.ufsUrl ?? uploadResult.data.url;
+
+    // Create document record
+    await prisma.generatedDocument.create({
+      data: {
+        authorization_form_id: form.id,
+        template_id: template.id,
+        generated_url: generatedUrl,
+      },
+    });
+
+    return c.json({ success: true, generated_url: generatedUrl });
+  }
+);
+
 // POST /api/authorizations/send-link/:ownerId
 router.post(
   "/send-link/:ownerId",
