@@ -41,19 +41,23 @@ const REQUIRED_FIELDS = [
   "n_camere", "n_bagni", "n_posti_letto", "periodo_disponibilita",
 ] as const;
 
+function isFilled(val: unknown): boolean {
+  if (val === null || val === undefined || val === "") return false;
+  if (typeof val === "number") return true; // 0 is valid
+  if (typeof val === "string") return val.trim() !== "";
+  return !!val;
+}
+
 function getProgress(data: Record<string, unknown>): number {
   let filled = 0;
   for (const field of REQUIRED_FIELDS) {
-    const val = data[field];
-    if (val === null || val === undefined || val === "") continue;
-    // Numbers: 0 is a valid value for fields like n_camere
-    if (typeof val === "number") { filled++; continue; }
-    // Strings: non-empty after trimming
-    if (typeof val === "string" && val.trim() !== "") { filled++; continue; }
-    // Other truthy values
-    if (val) filled++;
+    if (isFilled(data[field])) filled++;
   }
   return Math.round((filled / REQUIRED_FIELDS.length) * 100);
+}
+
+function getMissingFields(data: Record<string, unknown>): string[] {
+  return REQUIRED_FIELDS.filter((f) => !isFilled(data[f]));
 }
 
 // ============================================
@@ -104,7 +108,12 @@ function AutorizzazioniForm() {
         "periodo_disponibilita", "luogo_data",
       ];
       for (const f of allFields) {
-        fields[f] = (data as unknown as Record<string, unknown>)[f] ?? "";
+        let val = (data as unknown as Record<string, unknown>)[f] ?? "";
+        // Normalize ISO datetime strings to YYYY-MM-DD for date inputs
+        if (f === "nato_il" && typeof val === "string" && val.includes("T")) {
+          val = val.split("T")[0];
+        }
+        fields[f] = val;
       }
       setForm(fields);
     }
@@ -182,6 +191,7 @@ function AutorizzazioniForm() {
   }
 
   const progress = getProgress(form);
+  const missing = getMissingFields(form);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -209,6 +219,11 @@ function AutorizzazioniForm() {
               <span className="text-sm text-muted-foreground">{progress}%</span>
             </div>
             <Progress value={progress} className="h-2" />
+            {missing.length > 0 && progress > 80 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Campi mancanti: {missing.join(", ")}
+              </p>
+            )}
           </CardContent>
         </Card>
 
