@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,10 +16,12 @@ import {
   ExternalLink,
   Plus,
 } from "lucide-react";
-import { useUploadThing } from "@/lib/uploadthing-client";
 import { usePdfTemplates, useUpsertPdfTemplate } from "@/hooks/use-authorizations";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+
 export default function TemplatesPage() {
+  const { data: session } = useSession();
   const { data: grouped, isLoading } = usePdfTemplates();
   const upsert = useUpsertPdfTemplate();
   const { toast } = useToast();
@@ -28,8 +31,7 @@ export default function TemplatesPage() {
   const [documentType, setDocumentType] = useState("comunicazione_locazione");
   const [label, setLabel] = useState("");
   const [file, setFile] = useState<File | null>(null);
-
-  const { startUpload, isUploading } = useUploadThing("analysisFile");
+  const [uploading, setUploading] = useState(false);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -39,11 +41,22 @@ export default function TemplatesPage() {
         return;
       }
 
+      setUploading(true);
       try {
-        // Upload PDF
-        const uploadResult = await startUpload([file]);
-        if (!uploadResult?.[0]?.ufsUrl) {
-          throw new Error("Upload fallito");
+        // Upload PDF via backend
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const token = session?.user?.accessToken;
+        const uploadRes = await fetch(`${API_URL}/api/pdf-templates/upload`, {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: formData,
+        });
+
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) {
+          throw new Error(uploadData.error || "Upload fallito");
         }
 
         // Save template record
@@ -51,7 +64,7 @@ export default function TemplatesPage() {
           location,
           document_type: documentType,
           label,
-          template_url: uploadResult[0].ufsUrl,
+          template_url: uploadData.url,
         });
 
         toast({ title: "Template salvato", description: `Template "${label}" caricato per ${location}` });
@@ -65,9 +78,11 @@ export default function TemplatesPage() {
           description: err instanceof Error ? err.message : "Errore durante il salvataggio",
           variant: "destructive",
         });
+      } finally {
+        setUploading(false);
       }
     },
-    [file, location, documentType, label, startUpload, upsert, toast]
+    [file, location, documentType, label, session, upsert, toast]
   );
 
   if (isLoading) {
@@ -149,12 +164,12 @@ export default function TemplatesPage() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Carica un PDF con campi compilabili (form fields). Max 16 MB.
+                  Carica un PDF con campi compilabili (form fields). Max 8 MB.
                 </p>
               </div>
 
-              <Button type="submit" disabled={isUploading || upsert.isPending}>
-                {(isUploading || upsert.isPending) && (
+              <Button type="submit" disabled={uploading || upsert.isPending}>
+                {(uploading || upsert.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 <Upload className="mr-2 h-4 w-4" />

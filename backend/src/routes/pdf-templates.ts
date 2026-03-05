@@ -1,9 +1,14 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
+import { UTApi } from "uploadthing/server";
 import type { AppEnv } from "../types";
 
 const router = new Hono<AppEnv>();
+
+function getUtApi(): UTApi {
+  return new UTApi();
+}
 
 // GET /api/pdf-templates
 router.get("/", auth, requireManager, async (c) => {
@@ -19,6 +24,34 @@ router.get("/", auth, requireManager, async (c) => {
   }
 
   return c.json(grouped);
+});
+
+// POST /api/pdf-templates/upload — upload PDF file via backend UTApi
+router.post("/upload", auth, requireManager, async (c) => {
+  const formData = await c.req.formData();
+  const file = formData.get("file");
+
+  if (!file || !(file instanceof File)) {
+    return c.json({ error: "File PDF richiesto" }, 400);
+  }
+
+  if (!file.name.endsWith(".pdf")) {
+    return c.json({ error: "Solo file PDF ammessi" }, 400);
+  }
+
+  if (file.size > 8 * 1024 * 1024) {
+    return c.json({ error: "File troppo grande (max 8MB)" }, 400);
+  }
+
+  const utapi = getUtApi();
+  const uploadResult = await utapi.uploadFiles(file);
+
+  if (uploadResult.error) {
+    return c.json({ error: "Errore durante il caricamento del file" }, 500);
+  }
+
+  const url = uploadResult.data.ufsUrl ?? uploadResult.data.url;
+  return c.json({ url });
 });
 
 // POST /api/pdf-templates (manager)
