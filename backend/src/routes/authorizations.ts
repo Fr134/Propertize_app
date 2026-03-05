@@ -170,12 +170,18 @@ router.post("/token/:token/submit", async (c) => {
     return c.json({ success: true, pdf_generated: false });
   }
 
-  // Download template PDF
-  const templateResponse = await fetch(template.template_url);
-  if (!templateResponse.ok) {
-    return c.json({ error: "Impossibile scaricare il template PDF" }, 500);
+  // Load template PDF (supports both data URIs and HTTP URLs)
+  let templateBytes: ArrayBuffer;
+  if (template.template_url.startsWith("data:")) {
+    const base64 = template.template_url.split(",")[1];
+    templateBytes = Buffer.from(base64, "base64").buffer;
+  } else {
+    const templateResponse = await fetch(template.template_url);
+    if (!templateResponse.ok) {
+      return c.json({ error: "Impossibile scaricare il template PDF" }, 500);
+    }
+    templateBytes = await templateResponse.arrayBuffer();
   }
-  const templateBytes = await templateResponse.arrayBuffer();
 
   // Compile PDF
   const pdfBytes = await compilePdf(templateBytes, merged, form.location);

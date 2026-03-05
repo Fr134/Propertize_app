@@ -225,12 +225,14 @@ export default function TemplatesPage() {
                         Disattivato
                       </Badge>
                     )}
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={t.template_url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                        Apri PDF
-                      </a>
-                    </Button>
+                    {t.template_url !== "stored" && (
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={t.template_url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                          Apri PDF
+                        </a>
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"

@@ -1,14 +1,9 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma";
 import { auth, requireManager } from "../middleware/auth";
-import { UTApi } from "uploadthing/server";
 import type { AppEnv } from "../types";
 
 const router = new Hono<AppEnv>();
-
-function getUtApi(): UTApi {
-  return new UTApi();
-}
 
 // GET /api/pdf-templates
 router.get("/", auth, requireManager, async (c) => {
@@ -16,17 +11,31 @@ router.get("/", auth, requireManager, async (c) => {
     orderBy: [{ location: "asc" }, { document_type: "asc" }],
   });
 
-  // Group by location
-  const grouped: Record<string, typeof templates> = {};
+  // Group by location, omit large base64 template_url from response
+  const grouped: Record<string, Array<{
+    id: string;
+    location: string;
+    document_type: string;
+    label: string;
+    template_url: string;
+    is_active: boolean;
+  }>> = {};
   for (const t of templates) {
     if (!grouped[t.location]) grouped[t.location] = [];
-    grouped[t.location].push(t);
+    grouped[t.location].push({
+      id: t.id,
+      location: t.location,
+      document_type: t.document_type,
+      label: t.label,
+      template_url: t.template_url.startsWith("data:") ? "stored" : t.template_url,
+      is_active: t.is_active,
+    });
   }
 
   return c.json(grouped);
 });
 
-// POST /api/pdf-templates/upload — upload PDF file via backend UTApi
+// POST /api/pdf-templates/upload — store PDF as base64 data URI (no external service)
 router.post("/upload", auth, requireManager, async (c) => {
   const formData = await c.req.formData();
   const file = formData.get("file");
@@ -43,15 +52,11 @@ router.post("/upload", auth, requireManager, async (c) => {
     return c.json({ error: "File troppo grande (max 8MB)" }, 400);
   }
 
-  const utapi = getUtApi();
-  const uploadResult = await utapi.uploadFiles(file);
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const base64 = buffer.toString("base64");
+  const dataUri = `data:application/pdf;base64,${base64}`;
 
-  if (uploadResult.error) {
-    return c.json({ error: "Errore durante il caricamento del file" }, 500);
-  }
-
-  const url = uploadResult.data.ufsUrl ?? uploadResult.data.url;
-  return c.json({ url });
+  return c.json({ url: dataUri });
 });
 
 // POST /api/pdf-templates (manager)
