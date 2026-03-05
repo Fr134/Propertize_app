@@ -186,18 +186,22 @@ router.post("/token/:token/submit", async (c) => {
   // Compile PDF
   const pdfBytes = await compilePdf(templateBytes, merged, form.location);
 
-  // Upload compiled PDF via UTApi
-  const utapi = getUtApi();
-  const fileName = `autorizzazione-${form.owner.name.replace(/\s+/g, "-").toLowerCase()}-${Date.now()}.pdf`;
-  const blob = new Blob([Buffer.from(pdfBytes)], { type: "application/pdf" });
-  const file = new File([blob], fileName, { type: "application/pdf" });
-  const uploadResult = await utapi.uploadFiles(file);
+  // Try UTApi upload first, fallback to base64 data URI
+  let generatedUrl: string;
+  try {
+    const utapi = getUtApi();
+    const fileName = `autorizzazione-${form.owner.name.replace(/\s+/g, "-").toLowerCase()}-${Date.now()}.pdf`;
+    const blob = new Blob([Buffer.from(pdfBytes)], { type: "application/pdf" });
+    const file = new File([blob], fileName, { type: "application/pdf" });
+    const uploadResult = await utapi.uploadFiles(file);
 
-  if (uploadResult.error) {
-    return c.json({ error: "Errore durante il caricamento del PDF" }, 500);
+    if (uploadResult.error) throw new Error("UTApi upload failed");
+    generatedUrl = uploadResult.data.ufsUrl ?? uploadResult.data.url;
+  } catch {
+    // Fallback: store as base64 data URI
+    const base64 = Buffer.from(pdfBytes).toString("base64");
+    generatedUrl = `data:application/pdf;base64,${base64}`;
   }
-
-  const generatedUrl = uploadResult.data.ufsUrl ?? uploadResult.data.url;
 
   // Transaction: update form + create document record
   await prisma.$transaction([
@@ -315,19 +319,23 @@ router.post(
     // Compile PDF
     const pdfBytes = await compilePdf(templateBytes, formData, form.location);
 
-    // Upload compiled PDF via UTApi
-    const utapi = getUtApi();
-    const ownerName = form.cognome && form.nome ? `${form.nome}-${form.cognome}` : ownerId;
-    const fileName = `autorizzazione-${ownerName.replace(/\s+/g, "-").toLowerCase()}-${Date.now()}.pdf`;
-    const blob = new Blob([Buffer.from(pdfBytes)], { type: "application/pdf" });
-    const file = new File([blob], fileName, { type: "application/pdf" });
-    const uploadResult = await utapi.uploadFiles(file);
+    // Try UTApi upload first, fallback to base64 data URI
+    let generatedUrl: string;
+    try {
+      const utapi = getUtApi();
+      const ownerName = form.cognome && form.nome ? `${form.nome}-${form.cognome}` : ownerId;
+      const fileName = `autorizzazione-${ownerName.replace(/\s+/g, "-").toLowerCase()}-${Date.now()}.pdf`;
+      const blob = new Blob([Buffer.from(pdfBytes)], { type: "application/pdf" });
+      const file = new File([blob], fileName, { type: "application/pdf" });
+      const uploadResult = await utapi.uploadFiles(file);
 
-    if (uploadResult.error) {
-      return c.json({ error: "Errore durante il caricamento del PDF" }, 500);
+      if (uploadResult.error) throw new Error("UTApi upload failed");
+      generatedUrl = uploadResult.data.ufsUrl ?? uploadResult.data.url;
+    } catch {
+      // Fallback: store as base64 data URI
+      const base64 = Buffer.from(pdfBytes).toString("base64");
+      generatedUrl = `data:application/pdf;base64,${base64}`;
     }
-
-    const generatedUrl = uploadResult.data.ufsUrl ?? uploadResult.data.url;
 
     // Create document record
     await prisma.generatedDocument.create({

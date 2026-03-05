@@ -276,12 +276,28 @@ export default function AutorizzazioniManagerPage({
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" asChild>
-                        <a href={doc.generated_url} target="_blank" rel="noopener noreferrer">
+                      {doc.generated_url.startsWith("data:") ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const link = document.createElement("a");
+                            link.href = doc.generated_url;
+                            link.download = "autorizzazione.pdf";
+                            link.click();
+                          }}
+                        >
                           <Download className="mr-1.5 h-3.5 w-3.5" />
                           Scarica PDF
-                        </a>
-                      </Button>
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" asChild>
+                          <a href={doc.generated_url} target="_blank" rel="noopener noreferrer">
+                            <Download className="mr-1.5 h-3.5 w-3.5" />
+                            Scarica PDF
+                          </a>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
