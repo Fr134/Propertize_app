@@ -91,6 +91,16 @@ router.patch("/token/:token", async (c) => {
     if (key in body) data[key] = body[key];
   }
 
+  // Coerce types for Prisma
+  if (data.nato_il && typeof data.nato_il === "string") {
+    data.nato_il = new Date(data.nato_il as string);
+  }
+  for (const intField of ["n_camere", "n_bagni", "n_posti_letto"]) {
+    if (intField in data && data[intField] !== null && data[intField] !== undefined) {
+      data[intField] = parseInt(String(data[intField]), 10) || null;
+    }
+  }
+
   await prisma.authorizationForm.update({ where: { token }, data });
 
   return c.json({ saved: true });
@@ -122,6 +132,16 @@ router.post("/token/:token/submit", async (c) => {
   ];
   for (const key of formFields) {
     merged[key] = body[key] ?? (form as Record<string, unknown>)[key] ?? null;
+  }
+
+  // Coerce types for Prisma
+  if (merged.nato_il && typeof merged.nato_il === "string") {
+    merged.nato_il = new Date(merged.nato_il as string);
+  }
+  for (const intField of ["n_camere", "n_bagni", "n_posti_letto"]) {
+    if (merged[intField] !== null && merged[intField] !== undefined) {
+      merged[intField] = parseInt(String(merged[intField]), 10) || null;
+    }
   }
 
   // Validate required fields
@@ -163,7 +183,7 @@ router.post("/token/:token/submit", async (c) => {
   // Upload compiled PDF via UTApi
   const utapi = getUtApi();
   const fileName = `autorizzazione-${form.owner.name.replace(/\s+/g, "-").toLowerCase()}-${Date.now()}.pdf`;
-  const blob = new Blob([pdfBytes as BlobPart], { type: "application/pdf" });
+  const blob = new Blob([Buffer.from(pdfBytes)], { type: "application/pdf" });
   const file = new File([blob], fileName, { type: "application/pdf" });
   const uploadResult = await utapi.uploadFiles(file);
 
