@@ -18,6 +18,7 @@ import {
   ContactRound,
   TrendingUp,
   ListChecks,
+  FileText,
 } from "lucide-react";
 
 interface NavItem {
@@ -39,6 +40,7 @@ const managerNav: NavItem[] = [
   { label: "Scorte", href: "/manager/supplies", icon: Package },
   { label: "Contabilità", href: "/manager/accounting", icon: Receipt, permission: "can_manage_finance" },
   { label: "Team", href: "/manager/team", icon: Users2, permission: "can_manage_team" },
+  { label: "Template PDF", href: "/manager/settings/templates", icon: FileText, permission: "can_manage_onboarding" },
 ];
 
 const operatorNav: NavItem[] = [

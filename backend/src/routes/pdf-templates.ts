@@ -21,12 +21,8 @@ router.get("/", auth, requireManager, async (c) => {
   return c.json(grouped);
 });
 
-// POST /api/pdf-templates (super admin only)
+// POST /api/pdf-templates (manager)
 router.post("/", auth, requireManager, async (c) => {
-  if (!c.get("isSuperAdmin")) {
-    return c.json({ error: "Accesso riservato al super admin" }, 403);
-  }
-
   const body = await c.req.json();
   const { location, document_type, label, template_url } = body;
 

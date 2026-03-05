@@ -88,6 +88,18 @@ export const ourFileRouter = {
     .onUploadComplete(async ({ file }) => {
       return { url: file.ufsUrl };
     }),
+
+  pdfTemplate: f({ pdf: { maxFileSize: "16MB", maxFileCount: 1 } })
+    .middleware(async () => {
+      const { userId, role } = await requireSession();
+      if (role !== "MANAGER") {
+        throw new UploadThingError("Accesso riservato al manager");
+      }
+      return { userId, role };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      return { url: file.ufsUrl, uploadedBy: metadata.userId };
+    }),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;
