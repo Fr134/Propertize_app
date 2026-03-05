@@ -29,7 +29,7 @@ export default function TemplatesPage() {
   const [label, setLabel] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
-  const { startUpload, isUploading } = useUploadThing("pdfTemplate");
+  const { startUpload, isUploading } = useUploadThing("analysisFile");
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
