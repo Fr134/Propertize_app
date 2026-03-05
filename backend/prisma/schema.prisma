@@ -1003,6 +1003,12 @@ model PdfTemplate {
   is_active     Boolean  @default(true)
   created_at    DateTime @default(now())
 
+  // Custom email text (nullable → fallback to defaults)
+  email_link_subject String?
+  email_link_body    String?
+  email_doc_subject  String?
+  email_doc_body     String?
+
   generated GeneratedDocument[]
 
   @@unique([location, document_type])

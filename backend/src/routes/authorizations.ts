@@ -387,18 +387,35 @@ router.post(
 
     const url = `${FRONTEND_URL}/autorizzazioni?token=${form.token}`;
 
+    // Fetch custom email text from template (if any)
+    const template = await prisma.pdfTemplate.findFirst({
+      where: { location, document_type: "comunicazione_locazione", is_active: true },
+      select: { email_link_subject: true, email_link_body: true },
+    });
+
+    const defaultSubject = "Compila il modulo di autorizzazione — Propertize";
+    const defaultBody = `
+      <p>Ciao ${owner.name},</p>
+      <p>Per completare le autorizzazioni relative al tuo immobile, compila il seguente modulo:</p>
+      <p><a href="${url}" style="display:inline-block;padding:12px 24px;background:#0A6CFF;color:#fff;text-decoration:none;border-radius:6px;">Compila il modulo</a></p>
+      <p>Oppure copia questo link: ${url}</p>
+      <p>Cordiali saluti,<br/>Il team Propertize</p>
+    `;
+
+    const emailSubject = template?.email_link_subject
+      ? template.email_link_subject.replace(/\{\{name\}\}/g, owner.name).replace(/\{\{link\}\}/g, url)
+      : defaultSubject;
+
+    const emailBody = template?.email_link_body
+      ? `<p>${template.email_link_body.replace(/\{\{name\}\}/g, owner.name).replace(/\{\{link\}\}/g, url).replace(/\n/g, "</p><p>")}</p>`
+      : defaultBody;
+
     // Auto-send email to owner
     if (owner.email) {
       sendEmail({
         to: owner.email,
-        subject: "Compila il modulo di autorizzazione — Propertize",
-        html: `
-          <p>Ciao ${owner.name},</p>
-          <p>Per completare le autorizzazioni relative al tuo immobile, compila il seguente modulo:</p>
-          <p><a href="${url}" style="display:inline-block;padding:12px 24px;background:#0A6CFF;color:#fff;text-decoration:none;border-radius:6px;">Compila il modulo</a></p>
-          <p>Oppure copia questo link: ${url}</p>
-          <p>Cordiali saluti,<br/>Il team Propertize</p>
-        `,
+        subject: emailSubject,
+        html: emailBody,
       }).catch(() => {});
     }
 
@@ -442,6 +459,27 @@ router.post(
     }
     const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer());
 
+    // Fetch custom email text from template (if any)
+    const template = await prisma.pdfTemplate.findFirst({
+      where: { location: form.location, document_type: "comunicazione_locazione", is_active: true },
+      select: { email_doc_subject: true, email_doc_body: true },
+    });
+
+    const defaultDocSubject = "Il tuo documento di autorizzazione — Propertize";
+    const defaultDocBody = `
+      <p>Gentile ${form.owner.name},</p>
+      <p>In allegato trovi il documento di autorizzazione compilato.</p>
+      <p>Cordiali saluti,<br/>Il team Propertize</p>
+    `;
+
+    const docSubject = template?.email_doc_subject
+      ? template.email_doc_subject.replace(/\{\{name\}\}/g, form.owner.name)
+      : defaultDocSubject;
+
+    const docBody = template?.email_doc_body
+      ? `<p>${template.email_doc_body.replace(/\{\{name\}\}/g, form.owner.name).replace(/\n/g, "</p><p>")}</p>`
+      : defaultDocBody;
+
     // Send email with attachment via Resend directly
     const resendKey = process.env.RESEND_API_KEY;
     if (!resendKey) {
@@ -452,12 +490,8 @@ router.post(
     await resend.emails.send({
       from: FROM_EMAIL,
       to: ownerEmail,
-      subject: "Il tuo documento di autorizzazione — Propertize",
-      html: `
-        <p>Gentile ${form.owner.name},</p>
-        <p>In allegato trovi il documento di autorizzazione compilato.</p>
-        <p>Cordiali saluti,<br/>Il team Propertize</p>
-      `,
+      subject: docSubject,
+      html: docBody,
       attachments: [
         {
           filename: `autorizzazione-${form.owner.name.replace(/\s+/g, "-").toLowerCase()}.pdf`,

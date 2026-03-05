@@ -185,6 +185,10 @@ export function usePdfTemplates() {
         label: string;
         template_url: string;
         is_active: boolean;
+        email_link_subject: string | null;
+        email_link_body: string | null;
+        email_doc_subject: string | null;
+        email_doc_body: string | null;
       }>>>("/api/pdf-templates"),
   });
 }
@@ -197,6 +201,10 @@ export function useUpsertPdfTemplate() {
       document_type: string;
       label: string;
       template_url: string;
+      email_link_subject?: string;
+      email_link_body?: string;
+      email_doc_subject?: string;
+      email_doc_body?: string;
     }) =>
       fetchJson("/api/pdf-templates", {
         method: "POST",

@@ -19,6 +19,10 @@ router.get("/", auth, requireManager, async (c) => {
     label: string;
     template_url: string;
     is_active: boolean;
+    email_link_subject: string | null;
+    email_link_body: string | null;
+    email_doc_subject: string | null;
+    email_doc_body: string | null;
   }>> = {};
   for (const t of templates) {
     if (!grouped[t.location]) grouped[t.location] = [];
@@ -29,6 +33,10 @@ router.get("/", auth, requireManager, async (c) => {
       label: t.label,
       template_url: t.template_url.startsWith("data:") ? "stored" : t.template_url,
       is_active: t.is_active,
+      email_link_subject: t.email_link_subject,
+      email_link_body: t.email_link_body,
+      email_doc_subject: t.email_doc_subject,
+      email_doc_body: t.email_doc_body,
     });
   }
 
@@ -62,16 +70,24 @@ router.post("/upload", auth, requireManager, async (c) => {
 // POST /api/pdf-templates (manager)
 router.post("/", auth, requireManager, async (c) => {
   const body = await c.req.json();
-  const { location, document_type, label, template_url } = body;
+  const { location, document_type, label, template_url,
+    email_link_subject, email_link_body, email_doc_subject, email_doc_body } = body;
 
   if (!location || !document_type || !label || !template_url) {
     return c.json({ error: "Campi obbligatori: location, document_type, label, template_url" }, 400);
   }
 
+  const emailFields = {
+    email_link_subject: email_link_subject ?? null,
+    email_link_body: email_link_body ?? null,
+    email_doc_subject: email_doc_subject ?? null,
+    email_doc_body: email_doc_body ?? null,
+  };
+
   const template = await prisma.pdfTemplate.upsert({
     where: { location_document_type: { location, document_type } },
-    update: { label, template_url },
-    create: { location, document_type, label, template_url },
+    update: { label, template_url, ...emailFields },
+    create: { location, document_type, label, template_url, ...emailFields },
   });
 
   return c.json(template);

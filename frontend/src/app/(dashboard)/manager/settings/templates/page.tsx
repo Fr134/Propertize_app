@@ -32,6 +32,10 @@ export default function TemplatesPage() {
   const [label, setLabel] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [emailLinkSubject, setEmailLinkSubject] = useState("");
+  const [emailLinkBody, setEmailLinkBody] = useState("");
+  const [emailDocSubject, setEmailDocSubject] = useState("");
+  const [emailDocBody, setEmailDocBody] = useState("");
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -65,6 +69,10 @@ export default function TemplatesPage() {
           document_type: documentType,
           label,
           template_url: uploadData.url,
+          ...(emailLinkSubject && { email_link_subject: emailLinkSubject }),
+          ...(emailLinkBody && { email_link_body: emailLinkBody }),
+          ...(emailDocSubject && { email_doc_subject: emailDocSubject }),
+          ...(emailDocBody && { email_doc_body: emailDocBody }),
         });
 
         toast({ title: "Template salvato", description: `Template "${label}" caricato per ${location}` });
@@ -72,6 +80,10 @@ export default function TemplatesPage() {
         setLocation("");
         setLabel("");
         setFile(null);
+        setEmailLinkSubject("");
+        setEmailLinkBody("");
+        setEmailDocSubject("");
+        setEmailDocBody("");
       } catch (err) {
         toast({
           title: "Errore",
@@ -82,7 +94,7 @@ export default function TemplatesPage() {
         setUploading(false);
       }
     },
-    [file, location, documentType, label, session, upsert, toast]
+    [file, location, documentType, label, session, upsert, toast, emailLinkSubject, emailLinkBody, emailDocSubject, emailDocBody]
   );
 
   if (isLoading) {
@@ -168,6 +180,53 @@ export default function TemplatesPage() {
                 </p>
               </div>
 
+              {/* Custom email fields */}
+              <div className="border-t pt-4 mt-2 space-y-4">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Email personalizzate (opzionale)
+                </p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email_link_subject">Oggetto email link</Label>
+                  <Input
+                    id="email_link_subject"
+                    placeholder="es. Compila il modulo — {{name}}"
+                    value={emailLinkSubject}
+                    onChange={(e) => setEmailLinkSubject(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email_link_body">Testo email link</Label>
+                  <textarea
+                    id="email_link_body"
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    placeholder={"Variabili: {{name}}, {{link}}"}
+                    value={emailLinkBody}
+                    onChange={(e) => setEmailLinkBody(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email_doc_subject">Oggetto email documento</Label>
+                  <Input
+                    id="email_doc_subject"
+                    placeholder="es. Il tuo documento — {{name}}"
+                    value={emailDocSubject}
+                    onChange={(e) => setEmailDocSubject(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email_doc_body">Testo email documento</Label>
+                  <textarea
+                    id="email_doc_body"
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    placeholder={"Variabili: {{name}}"}
+                    value={emailDocBody}
+                    onChange={(e) => setEmailDocBody(e.target.value)}
+                  />
+                </div>
+              </div>
+
               <Button type="submit" disabled={uploading || upsert.isPending}>
                 {(uploading || upsert.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -241,6 +300,10 @@ export default function TemplatesPage() {
                         setDocumentType(t.document_type);
                         setLabel(t.label);
                         setFile(null);
+                        setEmailLinkSubject(t.email_link_subject ?? "");
+                        setEmailLinkBody(t.email_link_body ?? "");
+                        setEmailDocSubject(t.email_doc_subject ?? "");
+                        setEmailDocBody(t.email_doc_body ?? "");
                         setShowForm(true);
                       }}
                     >
