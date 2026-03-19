@@ -63,11 +63,13 @@ export function AreaCard({ area, onChange, onDelete, supplyItems }: AreaCardProp
       setUploadError("");
       try {
         const res = await startUpload([file]);
-        const url = res?.[0]?.ufsUrl ?? res?.[0]?.url;
+        console.log("Upload response:", JSON.stringify(res?.[0], null, 2));
+        const firstFile = res?.[0];
+        const url = firstFile?.ufsUrl ?? firstFile?.url ?? (firstFile?.serverData as { url?: string } | undefined)?.url;
         if (url) {
           onChange({ ...area, reference_photo_url: url });
         } else {
-          setUploadError("Upload riuscito ma URL mancante");
+          setUploadError("Upload riuscito ma URL mancante. Keys: " + (firstFile ? Object.keys(firstFile).join(", ") : "null"));
         }
       } catch (err) {
         console.error("Upload failed:", err);
