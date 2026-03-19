@@ -156,24 +156,59 @@ export function WeekView({ weekStart, tasks, onDayClick }: WeekViewProps) {
               <DroppableHourSlot key={hour} dateKey={d.key} hour={hour} />
             ))}
 
-            {/* Positioned tasks overlay */}
-            {d.timed.map((task) => {
-              const hour = getTaskTimeSlot(task.start_time) ?? HOUR_START;
-              const mins = getTaskMinutes(task.start_time);
-              const duration = task.duration_minutes ?? 60;
-              const top = (hour - HOUR_START) * SLOT_HEIGHT + (mins / 60) * SLOT_HEIGHT;
-              const height = Math.max((duration / 60) * SLOT_HEIGHT, 24);
+            {/* Positioned tasks overlay — side by side when overlapping */}
+            {(() => {
+              // Calculate positions with overlap columns
+              const positioned = d.timed.map((task) => {
+                const hour = getTaskTimeSlot(task.start_time) ?? HOUR_START;
+                const mins = getTaskMinutes(task.start_time);
+                const duration = task.duration_minutes ?? 60;
+                const startMin = (hour - HOUR_START) * 60 + mins;
+                const endMin = startMin + duration;
+                return { task, startMin, endMin };
+              });
 
-              return (
-                <div
-                  key={task.id}
-                  className="absolute left-0.5 right-0.5 z-10"
-                  style={{ top, height }}
-                >
-                  <DraggableTaskChip task={task} variant="detailed" />
-                </div>
-              );
-            })}
+              // Sort by start time
+              positioned.sort((a, b) => a.startMin - b.startMin);
+
+              // Assign columns: greedy left-to-right
+              const columns: { endMin: number }[] = [];
+              const taskColumns: { task: TaskListItem; top: number; height: number; col: number; totalCols: number }[] = [];
+
+              for (const p of positioned) {
+                // Find first column where this task fits (no overlap)
+                let col = columns.findIndex((c) => c.endMin <= p.startMin);
+                if (col === -1) {
+                  col = columns.length;
+                  columns.push({ endMin: p.endMin });
+                } else {
+                  columns[col].endMin = p.endMin;
+                }
+                const top = (p.startMin / 60) * SLOT_HEIGHT;
+                const height = Math.max(((p.endMin - p.startMin) / 60) * SLOT_HEIGHT, 24);
+                taskColumns.push({ task: p.task, top, height, col, totalCols: 0 });
+              }
+
+              const totalCols = columns.length || 1;
+              return taskColumns.map((tc) => {
+                const widthPct = 100 / totalCols;
+                const leftPct = tc.col * widthPct;
+                return (
+                  <div
+                    key={tc.task.id}
+                    className="absolute z-10"
+                    style={{
+                      top: tc.top,
+                      height: tc.height,
+                      left: `calc(${leftPct}% + 1px)`,
+                      width: `calc(${widthPct}% - 2px)`,
+                    }}
+                  >
+                    <DraggableTaskChip task={tc.task} variant="detailed" />
+                  </div>
+                );
+              });
+            })()}
           </div>
         ))}
       </div>
