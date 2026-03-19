@@ -538,7 +538,7 @@ export const createLeadSchema = z.object({
   email: z.string().email("Email non valida").optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
   notes: z.string().optional().or(z.literal("")),
-  status: z.enum(["NEW", "CONTACTED", "INTERESTED", "PROPOSAL_SENT", "NEGOTIATING", "WON", "LOST"]).default("NEW"),
+  status: z.enum(["NEW", "PROPOSAL_SENT", "NEGOTIATING", "WON", "LOST"]).default("NEW"),
   source: z.enum(["MANUAL", "REFERRAL", "SOCIAL", "WEBSITE", "OTHER"]).default("MANUAL"),
   property_address: z.string().optional().or(z.literal("")),
   property_type: z.enum(["APPARTAMENTO", "VILLA", "ALTRO"]).optional(),

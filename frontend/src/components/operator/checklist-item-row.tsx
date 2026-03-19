@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useUpdateChecklistItem, useSaveTaskPhoto, type ChecklistDataItem } from "@/hooks/use-tasks";
+import { useUploadThing } from "@/lib/uploadthing-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Camera, CheckCircle2, Circle, Upload, Loader2, Square, CheckSquare2 } from "lucide-react";
@@ -17,6 +18,14 @@ export function ChecklistItemRow({ taskId, index, item, disabled }: ChecklistIte
   const updateItem = useUpdateChecklistItem(taskId);
   const savePhoto = useSaveTaskPhoto(taskId);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  const { startUpload } = useUploadThing("taskPhoto", {
+    onUploadError: (err) => {
+      setUploadError(err.message);
+      setUploading(false);
+    },
+  });
 
   async function toggleCompleted() {
     if (disabled) return;
@@ -38,16 +47,21 @@ export function ChecklistItemRow({ taskId, index, item, disabled }: ChecklistIte
     if (!file || disabled) return;
 
     setUploading(true);
+    setUploadError("");
     try {
-      // TODO: replace with Uploadthing React component in production
-      const blobUrl = URL.createObjectURL(file);
-
+      const res = await startUpload([file]);
+      const uploaded = res?.[0];
+      const url = uploaded?.ufsUrl ?? uploaded?.url;
+      if (!url) {
+        setUploadError("Upload completato ma URL non trovato");
+        return;
+      }
       await savePhoto.mutateAsync({
         checklistItemIndex: index,
-        photoUrl: blobUrl,
+        photoUrl: url,
       });
-    } catch {
-      // error handled by mutation
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Errore upload");
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -170,6 +184,9 @@ export function ChecklistItemRow({ taskId, index, item, disabled }: ChecklistIte
                   {uploading ? "Upload..." : "Carica foto"}
                 </Button>
               </label>
+              {uploadError && (
+                <p className="text-xs text-destructive mt-1">{uploadError}</p>
+              )}
             </div>
           )}
         </div>

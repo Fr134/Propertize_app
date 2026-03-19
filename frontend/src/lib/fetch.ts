@@ -38,7 +38,9 @@ export async function fetchJson<T>(path: string, options?: RequestInit): Promise
   }
 
   const res = await fetch(url, { ...options, headers });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Errore di rete");
-  return data;
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Errore di rete (${res.status})`);
+  }
+  return res.json();
 }

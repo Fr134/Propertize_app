@@ -130,8 +130,6 @@ enum OnboardingStepStatus {
 
 enum LeadStatus {
   NEW
-  CONTACTED
-  INTERESTED
   PROPOSAL_SENT
   NEGOTIATING
   WON
@@ -199,6 +197,8 @@ model User {
   assigned_onboarding_workflows OnboardingWorkflow[] @relation("AssignedOnboarding")
   sent_documents                GeneratedDocument[]
   activity_logs                 PropertyActivityLog[] @relation("ActivityLogs")
+  inventory_transactions        InventoryTransaction[] @relation("InventoryTransactions")
+  purchase_orders               PurchaseOrder[]        @relation("PurchaseOrders")
 
   @@map("users")
 }
@@ -260,7 +260,7 @@ model Property {
   created_at         DateTime     @default(now())
   updated_at         DateTime     @updatedAt
 
-  owner              Owner?             @relation(fields: [owner_id], references: [id])
+  owner              Owner?             @relation(fields: [owner_id], references: [id], onDelete: SetNull)
   checklist_template ChecklistTemplate?
   tasks              Task[]
   linen_inventory    LinenInventory[]
@@ -450,7 +450,7 @@ model PropertySupplyStock {
   updated_by_task String?  @db.Uuid
 
   property    Property   @relation(fields: [property_id], references: [id], onDelete: Cascade)
-  supply_item SupplyItem @relation(fields: [supply_item_id], references: [id])
+  supply_item SupplyItem @relation(fields: [supply_item_id], references: [id], onDelete: Restrict)
 
   @@unique([property_id, supply_item_id])
   @@map("property_supply_stocks")
@@ -488,16 +488,19 @@ model Task {
   created_at            DateTime      @default(now())
   updated_at            DateTime      @updatedAt
 
-  property           Property          @relation(fields: [property_id], references: [id])
-  operator           User?             @relation("AssignedTasks", fields: [assigned_to], references: [id])
-  reviewer           User?             @relation("ReviewedTasks", fields: [reviewed_by], references: [id])
-  reopener           User?             @relation("ReopenedTasks", fields: [reopen_by], references: [id])
-  external_assignee  ExternalContact?  @relation(fields: [external_assignee_id], references: [id])
-  dotthouse_booking  DothouseBooking?  @relation(fields: [dotthouse_booking_id], references: [id])
+  property           Property          @relation(fields: [property_id], references: [id], onDelete: Restrict)
+  operator           User?             @relation("AssignedTasks", fields: [assigned_to], references: [id], onDelete: SetNull)
+  reviewer           User?             @relation("ReviewedTasks", fields: [reviewed_by], references: [id], onDelete: SetNull)
+  reopener           User?             @relation("ReopenedTasks", fields: [reopen_by], references: [id], onDelete: SetNull)
+  external_assignee  ExternalContact?  @relation(fields: [external_assignee_id], references: [id], onDelete: SetNull)
+  dotthouse_booking  DothouseBooking?  @relation(fields: [dotthouse_booking_id], references: [id], onDelete: SetNull)
   photos             TaskPhoto[]
   reports            MaintenanceReport[]
   supply_usages      TaskSupplyUsage[]
 
+  @@index([property_id, status])
+  @@index([assigned_to, status])
+  @@index([scheduled_date])
   @@map("tasks")
 }
 
@@ -538,7 +541,7 @@ model DothouseBooking {
   created_at     DateTime  @default(now())
   updated_at     DateTime  @updatedAt
 
-  property       Property  @relation(fields: [property_id], references: [id])
+  property       Property  @relation(fields: [property_id], references: [id], onDelete: Restrict)
   cleaning_task  Task?
 
   @@index([property_id, checkin_date])
@@ -554,6 +557,7 @@ model TaskPhoto {
 
   task Task @relation(fields: [task_id], references: [id], onDelete: Cascade)
 
+  @@index([task_id])
   @@map("task_photos")
 }
 
@@ -585,11 +589,13 @@ model MaintenanceReport {
   updated_at  DateTime       @updatedAt
   resolved_at DateTime?
 
-  property Property      @relation(fields: [property_id], references: [id])
-  task     Task?          @relation(fields: [task_id], references: [id])
-  author   User           @relation(fields: [created_by], references: [id])
+  property Property      @relation(fields: [property_id], references: [id], onDelete: Restrict)
+  task     Task?          @relation(fields: [task_id], references: [id], onDelete: SetNull)
+  author   User           @relation(fields: [created_by], references: [id], onDelete: Restrict)
   photos   ReportPhoto[]
 
+  @@index([property_id, status])
+  @@index([created_by])
   @@map("maintenance_reports")
 }
 
@@ -601,6 +607,7 @@ model ReportPhoto {
 
   report MaintenanceReport @relation(fields: [report_id], references: [id], onDelete: Cascade)
 
+  @@index([report_id])
   @@map("report_photos")
 }
 
@@ -620,10 +627,11 @@ model Expense {
   created_at   DateTime         @default(now())
   updated_at   DateTime         @updatedAt
 
-  property Property       @relation(fields: [property_id], references: [id])
-  author   User           @relation(fields: [created_by], references: [id])
+  property Property       @relation(fields: [property_id], references: [id], onDelete: Restrict)
+  author   User           @relation(fields: [created_by], references: [id], onDelete: Restrict)
   photos   ExpensePhoto[]
 
+  @@index([property_id])
   @@map("expenses")
 }
 
@@ -635,6 +643,7 @@ model ExpensePhoto {
 
   expense Expense @relation(fields: [expense_id], references: [id], onDelete: Cascade)
 
+  @@index([expense_id])
   @@map("expense_photos")
 }
 
@@ -682,7 +691,8 @@ model InventoryTransaction {
   created_by     String?         @db.Uuid
   created_at     DateTime        @default(now())
 
-  supply_item SupplyItem @relation(fields: [supply_item_id], references: [id])
+  supply_item SupplyItem @relation(fields: [supply_item_id], references: [id], onDelete: Restrict)
+  author      User?      @relation("InventoryTransactions", fields: [created_by], references: [id], onDelete: SetNull)
 
   @@index([supply_item_id, created_at])
   @@map("inventory_transactions")
@@ -698,7 +708,7 @@ model TaskSupplyUsage {
   updated_at     DateTime @updatedAt
 
   task        Task       @relation(fields: [task_id], references: [id], onDelete: Cascade)
-  supply_item SupplyItem @relation(fields: [supply_item_id], references: [id])
+  supply_item SupplyItem @relation(fields: [supply_item_id], references: [id], onDelete: Restrict)
 
   @@unique([task_id, supply_item_id])
   @@map("task_supply_usages")
@@ -715,7 +725,8 @@ model PurchaseOrder {
   created_at  DateTime            @default(now())
   updated_at  DateTime            @updatedAt
 
-  lines PurchaseOrderLine[]
+  author  User               @relation("PurchaseOrders", fields: [created_by], references: [id], onDelete: Restrict)
+  lines   PurchaseOrderLine[]
 
   @@map("purchase_orders")
 }
@@ -729,7 +740,7 @@ model PurchaseOrderLine {
   unit_cost         Decimal? @db.Decimal(10, 2)
 
   purchase_order PurchaseOrder @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
-  supply_item    SupplyItem    @relation(fields: [supply_item_id], references: [id])
+  supply_item    SupplyItem    @relation(fields: [supply_item_id], references: [id], onDelete: Restrict)
 
   @@unique([purchase_order_id, supply_item_id])
   @@map("purchase_order_lines")
@@ -758,10 +769,12 @@ model Lead {
   owner_id         String?       @unique @db.Uuid
 
   owner       Owner?              @relation(fields: [owner_id], references: [id])
-  assigned_to User?               @relation("AssignedLeads", fields: [assigned_to_id], references: [id])
+  assigned_to User?               @relation("AssignedLeads", fields: [assigned_to_id], references: [id], onDelete: SetNull)
   calls       Call[]
   analyses    PropertyAnalysis[]
 
+  @@index([status])
+  @@index([assigned_to_id])
   @@map("leads")
 }
 
@@ -811,9 +824,11 @@ model PropertyAnalysis {
   sent_at         DateTime?
   token           String         @unique @default(uuid())
   // Relations
-  lead        Lead? @relation(fields: [lead_id], references: [id])
-  assigned_to User? @relation("AssignedAnalyses", fields: [assigned_to_id], references: [id])
+  lead        Lead? @relation(fields: [lead_id], references: [id], onDelete: SetNull)
+  assigned_to User? @relation("AssignedAnalyses", fields: [assigned_to_id], references: [id], onDelete: SetNull)
 
+  @@index([status])
+  @@index([lead_id])
   @@map("property_analyses")
 }
 
@@ -830,8 +845,8 @@ model OnboardingWorkflow {
   notes           String?
   updated_at      DateTime  @updatedAt
 
-  owner       Owner            @relation(fields: [owner_id], references: [id])
-  assigned_to User?            @relation("AssignedOnboarding", fields: [assigned_to_id], references: [id])
+  owner       Owner            @relation(fields: [owner_id], references: [id], onDelete: Restrict)
+  assigned_to User?            @relation("AssignedOnboarding", fields: [assigned_to_id], references: [id], onDelete: SetNull)
   steps       OnboardingStep[]
 
   @@map("onboarding_workflows")
@@ -994,7 +1009,7 @@ model OnboardingFile {
   created_at   DateTime  @default(now())
   updated_at   DateTime  @updatedAt
 
-  owner Owner @relation(fields: [owner_id], references: [id])
+  owner Owner @relation(fields: [owner_id], references: [id], onDelete: Restrict)
 
   @@map("onboarding_files")
 }
@@ -1061,9 +1076,10 @@ model AuthorizationForm {
   periodo_disponibilita String?
   luogo_data          String?
 
-  owner     Owner               @relation(fields: [owner_id], references: [id])
+  owner     Owner               @relation(fields: [owner_id], references: [id], onDelete: Restrict)
   documents GeneratedDocument[]
 
+  @@index([owner_id])
   @@map("authorization_forms")
 }
 
@@ -1076,10 +1092,11 @@ model GeneratedDocument {
   sent_to_client_at     DateTime?
   sent_by_id            String?   @db.Uuid
 
-  form     AuthorizationForm @relation(fields: [authorization_form_id], references: [id])
-  template PdfTemplate       @relation(fields: [template_id], references: [id])
-  sent_by  User?             @relation(fields: [sent_by_id], references: [id])
+  form     AuthorizationForm @relation(fields: [authorization_form_id], references: [id], onDelete: Cascade)
+  template PdfTemplate       @relation(fields: [template_id], references: [id], onDelete: Restrict)
+  sent_by  User?             @relation(fields: [sent_by_id], references: [id], onDelete: SetNull)
 
+  @@index([authorization_form_id])
   @@map("generated_documents")
 }
 

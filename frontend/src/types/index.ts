@@ -112,8 +112,6 @@ export enum PurchaseOrderStatus {
 
 export enum LeadStatus {
   NEW = "NEW",
-  CONTACTED = "CONTACTED",
-  INTERESTED = "INTERESTED",
   PROPOSAL_SENT = "PROPOSAL_SENT",
   NEGOTIATING = "NEGOTIATING",
   WON = "WON",

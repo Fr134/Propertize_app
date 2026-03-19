@@ -303,21 +303,23 @@ router.patch("/:id/start", auth, async (c) => {
   const id = c.req.param("id");
   const userId = c.get("userId");
 
-  const { count } = await prisma.task.updateMany({
-    where: { id, status: "TODO", assigned_to: userId },
-    data: { status: "IN_PROGRESS", cleaning_started_at: new Date() },
+  const result = await prisma.$transaction(async (tx) => {
+    const task = await tx.task.findUnique({ where: { id } });
+    if (!task) return { error: "Task non trovato" as const, status: 404 as const };
+    if (task.assigned_to !== userId)
+      return { error: "Non sei assegnata a questo task" as const, status: 403 as const };
+    if (task.status !== "TODO")
+      return { data: { ...task, alreadyApplied: true } };
+
+    const updated = await tx.task.update({
+      where: { id },
+      data: { status: "IN_PROGRESS", cleaning_started_at: new Date() },
+    });
+    return { data: updated };
   });
 
-  if (count === 0) {
-    const task = await prisma.task.findUnique({ where: { id } });
-    if (!task) return c.json({ error: "Task non trovato" }, 404);
-    if (task.assigned_to !== userId)
-      return c.json({ error: "Non sei assegnata a questo task" }, 403);
-    return c.json({ ...task, alreadyApplied: true });
-  }
-
-  const updated = await prisma.task.findUnique({ where: { id } });
-  return c.json(updated);
+  if ("error" in result) return c.json({ error: result.error }, result.status);
+  return c.json(result.data);
 });
 
 // PATCH /api/tasks/:id/complete

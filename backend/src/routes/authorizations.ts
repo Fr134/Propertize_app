@@ -15,6 +15,17 @@ const router = new Hono<AppEnv>();
 // Helpers
 // ---------------------------------------------------------------------------
 
+const FORM_FIELDS = [
+  "cognome", "nome", "nato_a", "nato_prov", "nato_il",
+  "codice_fiscale", "residente_a", "residente_cap", "indirizzo_res",
+  "telefono", "email", "pec", "ruolo",
+  "immobile_via", "immobile_n", "immobile_indirizzo", "immobile_n2",
+  "immobile_piano", "immobile_comune", "immobile_cap", "immobile_prov",
+  "sezione", "foglio", "particella", "sub", "categoria",
+  "denominazione", "n_camere", "n_bagni", "n_posti_letto",
+  "periodo_disponibilita", "luogo_data",
+] as const;
+
 const REQUIRED_SUBMIT_FIELDS = [
   "cognome",
   "nome",
@@ -46,6 +57,18 @@ function getUtApi(): UTApi {
   return new UTApi();
 }
 
+async function loadTemplateBytes(templateUrl: string): Promise<ArrayBuffer> {
+  if (templateUrl.startsWith("data:")) {
+    const commaIndex = templateUrl.indexOf(",");
+    if (commaIndex === -1) throw new Error("Formato data URI non valido");
+    const base64 = templateUrl.substring(commaIndex + 1);
+    return Buffer.from(base64, "base64").buffer;
+  }
+  const response = await fetch(templateUrl);
+  if (!response.ok) throw new Error("Impossibile scaricare il template PDF");
+  return response.arrayBuffer();
+}
+
 // ---------------------------------------------------------------------------
 // PUBLIC — token-based (no auth)
 // ---------------------------------------------------------------------------
@@ -75,16 +98,7 @@ router.patch("/token/:token", async (c) => {
   if (form.submitted_at) return c.json({ error: "Modulo già inviato" }, 400);
 
   // Build update data from known fields only
-  const allowed = [
-    "cognome", "nome", "nato_a", "nato_prov", "nato_il",
-    "codice_fiscale", "residente_a", "residente_cap", "indirizzo_res",
-    "telefono", "email", "pec", "ruolo",
-    "immobile_via", "immobile_n", "immobile_indirizzo", "immobile_n2",
-    "immobile_piano", "immobile_comune", "immobile_cap", "immobile_prov",
-    "sezione", "foglio", "particella", "sub", "categoria",
-    "denominazione", "n_camere", "n_bagni", "n_posti_letto",
-    "periodo_disponibilita", "luogo_data",
-  ];
+  const allowed = FORM_FIELDS;
 
   const data: Record<string, unknown> = {};
   for (const key of allowed) {
@@ -120,17 +134,7 @@ router.post("/token/:token/submit", async (c) => {
 
   // Merge body into existing form data for validation
   const merged: Record<string, unknown> = {};
-  const formFields = [
-    "cognome", "nome", "nato_a", "nato_prov", "nato_il",
-    "codice_fiscale", "residente_a", "residente_cap", "indirizzo_res",
-    "telefono", "email", "pec", "ruolo",
-    "immobile_via", "immobile_n", "immobile_indirizzo", "immobile_n2",
-    "immobile_piano", "immobile_comune", "immobile_cap", "immobile_prov",
-    "sezione", "foglio", "particella", "sub", "categoria",
-    "denominazione", "n_camere", "n_bagni", "n_posti_letto",
-    "periodo_disponibilita", "luogo_data",
-  ];
-  for (const key of formFields) {
+  for (const key of FORM_FIELDS) {
     merged[key] = body[key] ?? (form as Record<string, unknown>)[key] ?? null;
   }
 
@@ -170,17 +174,12 @@ router.post("/token/:token/submit", async (c) => {
     return c.json({ success: true, pdf_generated: false });
   }
 
-  // Load template PDF (supports both data URIs and HTTP URLs)
+  // Load template PDF
   let templateBytes: ArrayBuffer;
-  if (template.template_url.startsWith("data:")) {
-    const base64 = template.template_url.split(",")[1];
-    templateBytes = Buffer.from(base64, "base64").buffer;
-  } else {
-    const templateResponse = await fetch(template.template_url);
-    if (!templateResponse.ok) {
-      return c.json({ error: "Impossibile scaricare il template PDF" }, 500);
-    }
-    templateBytes = await templateResponse.arrayBuffer();
+  try {
+    templateBytes = await loadTemplateBytes(template.template_url);
+  } catch {
+    return c.json({ error: "Impossibile scaricare il template PDF" }, 500);
   }
 
   // Compile PDF
@@ -229,7 +228,7 @@ router.post("/token/:token/submit", async (c) => {
           Visualizza i documenti
         </a></p>
       `,
-    }).catch(() => {});
+    }).catch((err) => console.error("[email] send failed:", err));
   }
 
   return c.json({ success: true, pdf_generated: true });
@@ -289,30 +288,15 @@ router.post(
 
     // Load template PDF (supports both data URIs and HTTP URLs)
     let templateBytes: ArrayBuffer;
-    if (template.template_url.startsWith("data:")) {
-      const base64 = template.template_url.split(",")[1];
-      templateBytes = Buffer.from(base64, "base64").buffer;
-    } else {
-      const templateResponse = await fetch(template.template_url);
-      if (!templateResponse.ok) {
-        return c.json({ error: "Impossibile scaricare il template PDF" }, 500);
-      }
-      templateBytes = await templateResponse.arrayBuffer();
+    try {
+      templateBytes = await loadTemplateBytes(template.template_url);
+    } catch {
+      return c.json({ error: "Impossibile scaricare il template PDF" }, 500);
     }
 
     // Build form data from stored fields
     const formData: Record<string, unknown> = {};
-    const fields = [
-      "cognome", "nome", "nato_a", "nato_prov", "nato_il",
-      "codice_fiscale", "residente_a", "residente_cap", "indirizzo_res",
-      "telefono", "email", "pec", "ruolo",
-      "immobile_via", "immobile_n", "immobile_indirizzo", "immobile_n2",
-      "immobile_piano", "immobile_comune", "immobile_cap", "immobile_prov",
-      "sezione", "foglio", "particella", "sub", "categoria",
-      "denominazione", "n_camere", "n_bagni", "n_posti_letto",
-      "periodo_disponibilita", "luogo_data",
-    ];
-    for (const key of fields) {
+    for (const key of FORM_FIELDS) {
       formData[key] = (form as Record<string, unknown>)[key] ?? null;
     }
 
@@ -416,7 +400,7 @@ router.post(
         to: owner.email,
         subject: emailSubject,
         html: emailBody,
-      }).catch(() => {});
+      }).catch((err) => console.error("[email] send failed:", err));
     }
 
     return c.json({ token: form.token, url });

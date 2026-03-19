@@ -72,10 +72,8 @@ export function AreaCard({ area, onChange, onDelete, supplyItems }: AreaCardProp
           onChange({ ...area, reference_photo_url: url });
         } else {
           setUploadError("Upload completato ma URL non trovato");
-          console.error("Upload response keys:", firstFile ? Object.keys(firstFile) : "null");
         }
       } catch (err) {
-        console.error("Upload failed:", err);
         setUploadError(err instanceof Error ? err.message : "Errore upload");
       } finally {
         setUploading(false);
