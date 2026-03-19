@@ -1,13 +1,14 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
-import { useProperty } from "@/hooks/use-properties";
+import { useRouter } from "next/navigation";
+import { useProperty, useDeleteProperty } from "@/hooks/use-properties";
 import { useChecklistTemplate } from "@/hooks/use-checklist-template";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, MapPin, Receipt, FileText, ClipboardList } from "lucide-react";
+import { ArrowLeft, MapPin, Receipt, FileText, ClipboardList, Trash2 } from "lucide-react";
 
 const propertyTypeLabels: Record<string, string> = {
   APPARTAMENTO: "Appartamento",
@@ -21,8 +22,11 @@ export default function PropertyDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
   const { data: property, isLoading } = useProperty(id);
   const { data: templateData } = useChecklistTemplate(id);
+  const deleteProperty = useDeleteProperty();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Caricamento...</p>;
@@ -34,6 +38,11 @@ export default function PropertyDetailPage({
 
   const items = Array.isArray(templateData?.items) ? templateData.items : [];
   const areaCount = items.length;
+
+  async function handleDelete() {
+    await deleteProperty.mutateAsync(id);
+    router.push("/manager/properties");
+  }
 
   return (
     <div className="space-y-6">
@@ -69,6 +78,34 @@ export default function PropertyDetailPage({
               Contabilità
             </Link>
           </Button>
+          {confirmDelete ? (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDelete}
+                disabled={deleteProperty.isPending}
+              >
+                {deleteProperty.isPending ? "Eliminazione..." : "Conferma"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfirmDelete(false)}
+              >
+                Annulla
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 

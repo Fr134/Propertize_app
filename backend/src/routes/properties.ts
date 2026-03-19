@@ -75,6 +75,18 @@ router.get("/:id", auth, async (c) => {
   return c.json(property);
 });
 
+// DELETE /api/properties/:id
+router.delete("/:id", auth, requireManager, requirePermission("can_manage_operations"), async (c) => {
+  const id = c.req.param("id");
+
+  const property = await prisma.property.findUnique({ where: { id } });
+  if (!property) return c.json({ error: "Immobile non trovato" }, 404);
+
+  await prisma.property.delete({ where: { id } });
+
+  return c.json({ success: true });
+});
+
 // GET /api/properties/:id/supplies
 router.get("/:id/supplies", auth, async (c) => {
   const id = c.req.param("id");

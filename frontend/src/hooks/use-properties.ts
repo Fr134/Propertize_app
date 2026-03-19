@@ -36,6 +36,17 @@ export function useCreateProperty() {
   });
 }
 
+export function useDeleteProperty() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchJson(`/api/properties/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["properties"] });
+    },
+  });
+}
+
 // Types matching Prisma response
 interface PropertyListItem {
   id: string;

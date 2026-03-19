@@ -125,59 +125,67 @@ router.post("/", auth, requireManager, requirePermission("can_manage_operations"
 
   if (isCleaning) {
     const rawTemplate = property.checklist_template?.items;
-    type TemplateArea = {
+
+    // Template areas use snake_case from the checklist template schema
+    type RawTemplateArea = {
       area: string;
       description: string;
       photo_required: boolean;
-      subTasks?: { id: string; text: string }[];
-    };
-    type TemplateSupply = {
-      id: string;
-      text: string;
-      supplyItemId?: string | null;
-      expectedQty?: number;
+      reference_photo_url?: string | null;
+      sub_tasks?: { id: string; label: string; completed: boolean }[];
+      supply_items?: { supply_item_id: string; label: string; expected_qty: number }[];
     };
 
-    const templateAreas: TemplateArea[] = Array.isArray(rawTemplate)
-      ? (rawTemplate as unknown as TemplateArea[])
-      : (((rawTemplate as Record<string, unknown>)?.items as TemplateArea[]) ?? []);
-    const templateSupplies: TemplateSupply[] = Array.isArray(rawTemplate)
-      ? []
-      : (((rawTemplate as Record<string, unknown>)?.staySupplies as TemplateSupply[]) ?? []);
+    const templateAreas: RawTemplateArea[] = Array.isArray(rawTemplate)
+      ? (rawTemplate as unknown as RawTemplateArea[])
+      : [];
 
     if (templateAreas.length > 0) {
+      // Collect supply items from all areas for staySupplies
+      const allSupplyItems: { id: string; text: string; supplyItemId: string; expectedQty: number }[] = [];
+      for (const area of templateAreas) {
+        for (const si of (area.supply_items ?? [])) {
+          if (si.supply_item_id) {
+            allSupplyItems.push({
+              id: crypto.randomUUID(),
+              text: si.label,
+              supplyItemId: si.supply_item_id,
+              expectedQty: si.expected_qty,
+            });
+          }
+        }
+      }
+
       checklistData = {
         areas: templateAreas.map((item) => ({
           area: item.area,
           description: item.description,
           photo_required: item.photo_required,
+          reference_photo_url: item.reference_photo_url ?? null,
           completed: false,
           photo_urls: [] as string[],
           notes: "",
-          subTasks: (item.subTasks ?? []).map((st) => ({
+          subTasks: (item.sub_tasks ?? []).map((st) => ({
             id: st.id,
-            text: st.text,
+            text: st.label,
             completed: false,
           })),
         })),
-        staySupplies: templateSupplies.map((s) => ({
+        staySupplies: allSupplyItems.map((s) => ({
           id: s.id,
           text: s.text,
           checked: false,
-          ...(s.supplyItemId
-            ? {
-                supplyItemId: s.supplyItemId,
-                expectedQty: s.expectedQty ?? 1,
-                qtyUsed: 0,
-              }
-            : {}),
+          supplyItemId: s.supplyItemId,
+          expectedQty: s.expectedQty,
+          qtyUsed: 0,
         })),
       };
     }
 
-    linkedSupplies = templateSupplies
-      .filter((s) => s.supplyItemId)
-      .map((s) => ({ supplyItemId: s.supplyItemId!, expectedQty: s.expectedQty ?? 1 }));
+    linkedSupplies = templateAreas
+      .flatMap((a) => a.supply_items ?? [])
+      .filter((si) => si.supply_item_id)
+      .map((si) => ({ supplyItemId: si.supply_item_id, expectedQty: si.expected_qty }));
   }
 
   // Determine can_use_supplies default
