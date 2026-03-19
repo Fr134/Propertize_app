@@ -148,6 +148,11 @@ export interface OnboardingCompletedData {
   completedAt: Date;
 }
 
+export interface AnalysisLinkData {
+  clientName: string;
+  analysisUrl: string;
+}
+
 // ---------------------------------------------------------------------------
 // Templates
 // ---------------------------------------------------------------------------
@@ -349,5 +354,22 @@ export function onboardingCompleted(data: OnboardingCompletedData) {
   return {
     subject: `Onboarding completato — ${data.ownerName}`,
     html: base("Onboarding Completato", body),
+  };
+}
+
+// 11. Analysis link sent to client
+export function analysisLink(data: AnalysisLinkData) {
+  const body = [
+    `<p>Ciao ${data.clientName},</p>`,
+    `<p>Grazie per il tuo interesse! Per fornirti un'analisi accurata del potenziale del tuo immobile, abbiamo bisogno di alcune informazioni.</p>`,
+    `<p>Compila il modulo cliccando il pulsante qui sotto:</p>`,
+    link(data.analysisUrl, "Compila il modulo di analisi"),
+    `<p style="margin-top:8px;font-size:13px;color:#64748b;">Oppure copia questo link: ${data.analysisUrl}</p>`,
+    `<p>Cordiali saluti,<br/>Il team Propertize</p>`,
+  ].join("\n");
+
+  return {
+    subject: "Richiedi l'analisi del tuo immobile — Propertize",
+    html: base("Analisi Immobile", body),
   };
 }

@@ -6,7 +6,8 @@ import { createLeadSchema, updateLeadSchema, createCallSchema, reassignSchema } 
 import { DEFAULT_ONBOARDING_STEPS } from "../lib/onboarding-defaults";
 import { getNextAssignee, incrementAssignmentCount, decrementAssignmentCount } from "../lib/assignment";
 import { sendEmail } from "../lib/email";
-import { newLeadAssigned, leadConverted } from "../lib/email-templates";
+import { newLeadAssigned, leadConverted, analysisLink } from "../lib/email-templates";
+import { FRONTEND_URL } from "../lib/email";
 import type { AppEnv } from "../types";
 import type { LeadStatus } from "@prisma/client";
 
@@ -65,6 +66,16 @@ router.post("/leads", auth, requireManager, requirePermission("can_manage_leads"
 
   if (assigneeId) {
     await incrementAssignmentCount(assigneeId, "leads");
+  }
+
+  // Send analysis link to client
+  if (parsed.data.email) {
+    const analysisUrl = `${FRONTEND_URL}/analisi?lead_id=${lead.id}`;
+    const tpl = analysisLink({
+      clientName: parsed.data.first_name,
+      analysisUrl,
+    });
+    sendEmail({ to: parsed.data.email, ...tpl });
   }
 
   // Notify assigned manager
