@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,11 @@ import {
   X,
   ListChecks,
   PackageCheck,
+  ImagePlus,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUploadThing } from "@/lib/uploadthing-client";
 import type { ChecklistArea, SubTask, ChecklistSupplyItem } from "@/hooks/use-checklist-template";
 
 interface SupplyItemOption {
@@ -41,6 +44,33 @@ interface AreaCardProps {
 
 export function AreaCard({ area, onChange, onDelete, supplyItems }: AreaCardProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const { startUpload } = useUploadThing("checklistPhoto");
+
+  const handlePhotoUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setUploading(true);
+      try {
+        const res = await startUpload([file]);
+        if (res?.[0]?.ufsUrl) {
+          onChange({ ...area, reference_photo_url: res[0].ufsUrl });
+        }
+      } catch {
+        // upload failed silently
+      } finally {
+        setUploading(false);
+        e.target.value = "";
+      }
+    },
+    [area, onChange, startUpload]
+  );
+
+  const removePhoto = useCallback(() => {
+    onChange({ ...area, reference_photo_url: null });
+  }, [area, onChange]);
 
   const {
     attributes,
@@ -161,6 +191,48 @@ export function AreaCard({ area, onChange, onDelete, supplyItems }: AreaCardProp
             onChange={(e) => updateField("description", e.target.value)}
             rows={2}
           />
+        </div>
+
+        {/* Reference photo */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <ImagePlus className="h-3.5 w-3.5 text-muted-foreground" />
+            <Label className="text-xs">Foto di riferimento</Label>
+          </div>
+          {area.reference_photo_url ? (
+            <div className="relative inline-block">
+              <img
+                src={area.reference_photo_url}
+                alt={`Riferimento ${area.area}`}
+                className="h-32 w-auto rounded-md border object-cover"
+              />
+              <button
+                type="button"
+                onClick={removePhoto}
+                className="absolute -right-2 -top-2 rounded-full bg-destructive p-1 text-white shadow-sm hover:bg-destructive/90"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <label className="flex h-24 w-40 cursor-pointer items-center justify-center rounded-md border border-dashed text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+              {uploading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  <ImagePlus className="h-5 w-5" />
+                  <span className="text-xs">Carica foto</span>
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoUpload}
+                disabled={uploading}
+              />
+            </label>
+          )}
         </div>
 
         {/* Sub-tasks */}

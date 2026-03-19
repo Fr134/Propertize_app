@@ -87,6 +87,18 @@ export function ChecklistItemRow({ taskId, index, item, disabled }: ChecklistIte
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
 
+          {/* Reference photo */}
+          {item.reference_photo_url && (
+            <div className="mt-2">
+              <p className="text-xs font-medium text-muted-foreground mb-1">Foto di riferimento</p>
+              <img
+                src={item.reference_photo_url}
+                alt={`Riferimento ${item.area}`}
+                className="h-32 w-auto rounded-md border object-cover"
+              />
+            </div>
+          )}
+
           {/* Sub-tasks */}
           {hasSubTasks && (
             <div className="mt-2 space-y-1.5 pl-1">

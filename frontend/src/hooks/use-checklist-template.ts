@@ -19,6 +19,7 @@ export interface ChecklistArea {
   area: string;
   description: string;
   photo_required: boolean;
+  reference_photo_url?: string | null;
   sub_tasks: SubTask[];
   supply_items: ChecklistSupplyItem[];
 }

@@ -23,6 +23,7 @@ export const checklistAreaSchema = z.object({
   area: z.string(),
   description: z.string(),
   photo_required: z.boolean(),
+  reference_photo_url: z.string().nullable().optional(),
   sub_tasks: z.array(subTaskSchema),
   supply_items: z.array(checklistSupplyItemSchema),
 });

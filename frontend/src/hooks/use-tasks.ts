@@ -45,6 +45,7 @@ interface ChecklistDataItem {
   area: string;
   description: string;
   photo_required: boolean;
+  reference_photo_url?: string | null;
   completed: boolean;
   photo_urls: string[];
   notes: string;

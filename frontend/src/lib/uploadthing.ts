@@ -72,6 +72,18 @@ export const ourFileRouter = {
       return { url: file.ufsUrl, uploadedBy: metadata.userId };
     }),
 
+  checklistPhoto: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
+    .middleware(async () => {
+      const { userId, role } = await requireSession();
+      if (role !== "MANAGER") {
+        throw new UploadThingError("Accesso riservato al manager");
+      }
+      return { userId, role };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      return { url: file.ufsUrl, uploadedBy: metadata.userId };
+    }),
+
   // Public onboarding file uploads (no auth — owner fills form via token)
   onboardingPhoto: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
     .middleware(async () => {
