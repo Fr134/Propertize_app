@@ -40,7 +40,7 @@ export const TaskChip = forwardRef<HTMLDivElement, TaskChipProps>(
     const content =
       variant === "detailed" ? (
         <>
-          {typeInfo.emoji} {task.property.code} &middot; {assigneeLabel}
+          {typeInfo.emoji} {task.property.name} &middot; {assigneeLabel}
         </>
       ) : (
         <>
