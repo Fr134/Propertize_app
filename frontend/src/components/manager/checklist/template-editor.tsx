@@ -51,8 +51,18 @@ interface TemplateEditorProps {
   initialAreas: ChecklistArea[];
 }
 
+function normalizeArea(a: ChecklistArea): ChecklistArea {
+  return {
+    ...a,
+    sub_tasks: Array.isArray(a.sub_tasks) ? a.sub_tasks : [],
+    supply_items: Array.isArray(a.supply_items) ? a.supply_items : [],
+  };
+}
+
 export function TemplateEditor({ propertyId, initialAreas }: TemplateEditorProps) {
-  const [areas, setAreas] = useState<ChecklistArea[]>(initialAreas);
+  const [areas, setAreas] = useState<ChecklistArea[]>(
+    Array.isArray(initialAreas) ? initialAreas.map(normalizeArea) : []
+  );
   const saveTemplate = useSaveChecklistTemplate(propertyId);
   const { data: supplyItems = [] } = useSupplyItems({ active: true });
 

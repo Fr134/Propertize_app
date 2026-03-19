@@ -45,7 +45,7 @@ export default function ChecklistTemplatePage({
 
       <TemplateEditor
         propertyId={id}
-        initialAreas={templateData?.items ?? []}
+        initialAreas={Array.isArray(templateData?.items) ? templateData.items : []}
       />
     </div>
   );

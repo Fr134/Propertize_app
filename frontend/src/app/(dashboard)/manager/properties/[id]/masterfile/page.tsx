@@ -113,11 +113,11 @@ export default function MasterfilePage({
       )
     : 0;
 
-  const appliances: ApplianceItem[] = masterfile?.appliances ??
+  const appliances: ApplianceItem[] = Array.isArray(masterfile?.appliances) ? masterfile.appliances :
     DEFAULT_APPLIANCE_TYPES.map((type) => ({ type }));
-  const customerCareQa: CustomerCareQAItem[] = masterfile?.customer_care_qa ?? DEFAULT_QA;
-  const documents: DocumentItem[] = masterfile?.documents ?? DEFAULT_DOCS;
-  const requiredPhotos: RequiredPhotoItem[] = masterfile?.required_photos ?? DEFAULT_PHOTOS;
+  const customerCareQa: CustomerCareQAItem[] = Array.isArray(masterfile?.customer_care_qa) ? masterfile.customer_care_qa : DEFAULT_QA;
+  const documents: DocumentItem[] = Array.isArray(masterfile?.documents) ? masterfile.documents : DEFAULT_DOCS;
+  const requiredPhotos: RequiredPhotoItem[] = Array.isArray(masterfile?.required_photos) ? masterfile.required_photos : DEFAULT_PHOTOS;
   const wasteInfo = (masterfile?.waste_info ?? {}) as Record<string, string>;
   const inventoryInfo = (masterfile?.inventory_info ?? {}) as Record<string, string>;
 

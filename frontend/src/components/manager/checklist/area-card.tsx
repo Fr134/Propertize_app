@@ -63,13 +63,16 @@ export function AreaCard({ area, onChange, onDelete, supplyItems }: AreaCardProp
       setUploadError("");
       try {
         const res = await startUpload([file]);
-        console.log("Upload response:", JSON.stringify(res?.[0], null, 2));
         const firstFile = res?.[0];
-        const url = firstFile?.ufsUrl ?? firstFile?.url ?? (firstFile?.serverData as { url?: string } | undefined)?.url;
+        // Try all possible URL properties from UploadThing response
+        const url = firstFile?.ufsUrl
+          ?? firstFile?.url
+          ?? (firstFile?.serverData as { url?: string } | undefined)?.url;
         if (url) {
           onChange({ ...area, reference_photo_url: url });
         } else {
-          setUploadError("Upload riuscito ma URL mancante. Keys: " + (firstFile ? Object.keys(firstFile).join(", ") : "null"));
+          setUploadError("Upload completato ma URL non trovato");
+          console.error("Upload response keys:", firstFile ? Object.keys(firstFile) : "null");
         }
       } catch (err) {
         console.error("Upload failed:", err);
@@ -100,6 +103,10 @@ export function AreaCard({ area, onChange, onDelete, supplyItems }: AreaCardProp
     transition,
   };
 
+  // Normalize arrays that may be missing from old DB data
+  const subTasks = Array.isArray(area.sub_tasks) ? area.sub_tasks : [];
+  const areaSupplyItems = Array.isArray(area.supply_items) ? area.supply_items : [];
+
   // --- Field updaters ---
   function updateField<K extends keyof ChecklistArea>(key: K, value: ChecklistArea[K]) {
     onChange({ ...area, [key]: value });
@@ -108,15 +115,15 @@ export function AreaCard({ area, onChange, onDelete, supplyItems }: AreaCardProp
   // --- Sub-tasks ---
   function addSubTask() {
     const newSt: SubTask = { id: crypto.randomUUID(), label: "", completed: false };
-    updateField("sub_tasks", [...area.sub_tasks, newSt]);
+    updateField("sub_tasks", [...subTasks, newSt]);
   }
 
   function removeSubTask(index: number) {
-    updateField("sub_tasks", area.sub_tasks.filter((_, i) => i !== index));
+    updateField("sub_tasks", subTasks.filter((_, i) => i !== index));
   }
 
   function updateSubTaskLabel(index: number, label: string) {
-    const updated = [...area.sub_tasks];
+    const updated = [...subTasks];
     updated[index] = { ...updated[index], label };
     updateField("sub_tasks", updated);
   }
@@ -128,16 +135,16 @@ export function AreaCard({ area, onChange, onDelete, supplyItems }: AreaCardProp
       label: "",
       expected_qty: 1,
     };
-    updateField("supply_items", [...area.supply_items, newSi]);
+    updateField("supply_items", [...areaSupplyItems, newSi]);
   }
 
   function removeSupplyCheck(index: number) {
-    updateField("supply_items", area.supply_items.filter((_, i) => i !== index));
+    updateField("supply_items", areaSupplyItems.filter((_, i) => i !== index));
   }
 
   function updateSupplyCheck(index: number, supplyItemId: string) {
     const item = supplyItems.find((s) => s.id === supplyItemId);
-    const updated = [...area.supply_items];
+    const updated = [...areaSupplyItems];
     updated[index] = {
       ...updated[index],
       supply_item_id: supplyItemId,
@@ -147,7 +154,7 @@ export function AreaCard({ area, onChange, onDelete, supplyItems }: AreaCardProp
   }
 
   function updateSupplyQty(index: number, qty: number) {
-    const updated = [...area.supply_items];
+    const updated = [...areaSupplyItems];
     updated[index] = { ...updated[index], expected_qty: Math.max(1, qty) };
     updateField("supply_items", updated);
   }
@@ -260,7 +267,7 @@ export function AreaCard({ area, onChange, onDelete, supplyItems }: AreaCardProp
             <ListChecks className="h-3.5 w-3.5 text-muted-foreground" />
             <Label className="text-xs">Sotto-task</Label>
           </div>
-          {area.sub_tasks.map((st, stIdx) => (
+          {subTasks.map((st, stIdx) => (
             <div key={st.id} className="flex items-center gap-2">
               <Input
                 placeholder="Es. Pulire WC"
@@ -293,7 +300,7 @@ export function AreaCard({ area, onChange, onDelete, supplyItems }: AreaCardProp
             <PackageCheck className="h-3.5 w-3.5 text-muted-foreground" />
             <Label className="text-xs">Verifica scorte</Label>
           </div>
-          {area.supply_items.map((si, siIdx) => (
+          {areaSupplyItems.map((si, siIdx) => (
             <div key={siIdx} className="flex items-center gap-2">
               <Select
                 value={si.supply_item_id || "none"}

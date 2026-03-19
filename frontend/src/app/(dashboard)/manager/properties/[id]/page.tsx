@@ -32,7 +32,8 @@ export default function PropertyDetailPage({
     return <p className="text-sm text-destructive">Immobile non trovato.</p>;
   }
 
-  const areaCount = templateData?.items?.length ?? 0;
+  const items = Array.isArray(templateData?.items) ? templateData.items : [];
+  const areaCount = items.length;
 
   return (
     <div className="space-y-6">
