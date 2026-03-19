@@ -8,7 +8,7 @@ import { useChecklistTemplate } from "@/hooks/use-checklist-template";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, MapPin, Receipt, FileText, ClipboardList, Trash2 } from "lucide-react";
+import { ArrowLeft, MapPin, Receipt, FileText, ClipboardList, Trash2, ScrollText } from "lucide-react";
 
 const propertyTypeLabels: Record<string, string> = {
   APPARTAMENTO: "Appartamento",
@@ -76,6 +76,12 @@ export default function PropertyDetailPage({
             <Link href={`/manager/properties/${id}/accounting`}>
               <Receipt className="mr-2 h-4 w-4" />
               Contabilità
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href={`/manager/properties/${id}/activity-log`}>
+              <ScrollText className="mr-2 h-4 w-4" />
+              Registro
             </Link>
           </Button>
           {confirmDelete ? (

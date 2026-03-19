@@ -198,6 +198,7 @@ model User {
   assigned_analyses            PropertyAnalysis[]   @relation("AssignedAnalyses")
   assigned_onboarding_workflows OnboardingWorkflow[] @relation("AssignedOnboarding")
   sent_documents                GeneratedDocument[]
+  activity_logs                 PropertyActivityLog[] @relation("ActivityLogs")
 
   @@map("users")
 }
@@ -269,6 +270,7 @@ model Property {
   inventory_items    PropertyInventoryItem[]
   supply_stocks      PropertySupplyStock[]
   bookings           DothouseBooking[]
+  activity_logs      PropertyActivityLog[]
 
   @@map("properties")
 }
@@ -1078,4 +1080,35 @@ model GeneratedDocument {
   sent_by  User?             @relation(fields: [sent_by_id], references: [id])
 
   @@map("generated_documents")
+}
+
+// ============================================
+// Property Activity Log
+// ============================================
+
+enum ActivityLogCategory {
+  MANUTENZIONE
+  PROBLEMA
+  NOTA
+  ISPEZIONE
+}
+
+model PropertyActivityLog {
+  id          String              @id @default(uuid()) @db.Uuid
+  property_id String              @db.Uuid
+  created_by  String              @db.Uuid
+  date        DateTime            @db.Date
+  category    ActivityLogCategory
+  title       String
+  description String?
+  is_resolved Boolean             @default(false)
+  resolved_at DateTime?
+  created_at  DateTime            @default(now())
+  updated_at  DateTime            @updatedAt
+
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+  author   User     @relation("ActivityLogs", fields: [created_by], references: [id])
+
+  @@index([property_id, date])
+  @@map("property_activity_logs")
 }

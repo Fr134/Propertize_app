@@ -794,3 +794,28 @@ export const reassignSchema = z.object({
 });
 
 export type ReassignInput = z.infer<typeof reassignSchema>;
+
+// ============================================
+// Property Activity Log
+// ============================================
+
+export const createActivityLogSchema = z.object({
+  property_id: z.string().uuid("ID immobile non valido"),
+  date: z.string().min(1, "Data obbligatoria"),
+  category: z.enum(["MANUTENZIONE", "PROBLEMA", "NOTA", "ISPEZIONE"]),
+  title: z.string().min(1, "Titolo obbligatorio"),
+  description: z.string().optional(),
+  is_resolved: z.boolean().optional(),
+});
+
+export type CreateActivityLogInput = z.infer<typeof createActivityLogSchema>;
+
+export const updateActivityLogSchema = z.object({
+  date: z.string().optional(),
+  category: z.enum(["MANUTENZIONE", "PROBLEMA", "NOTA", "ISPEZIONE"]).optional(),
+  title: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+  is_resolved: z.boolean().optional(),
+});
+
+export type UpdateActivityLogInput = z.infer<typeof updateActivityLogSchema>;
