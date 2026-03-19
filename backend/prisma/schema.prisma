@@ -763,6 +763,9 @@ model Lead {
   property_type    PropertyType?
   estimated_rooms  Int?
   assigned_to_id   String?       @db.Uuid
+  form_url         String?
+  notion_page_url  String?
+  form_submitted_at DateTime?
   created_at       DateTime      @default(now())
   updated_at       DateTime      @updatedAt
   converted_at     DateTime?

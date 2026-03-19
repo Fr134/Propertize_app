@@ -410,6 +410,59 @@ export default function LeadDetailPage({
             </CardContent>
           </Card>
 
+          {/* Form status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Modulo immobile
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {lead.form_submitted_at ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-100 text-green-800">Compilato</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(lead.form_submitted_at).toLocaleDateString("it-IT", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                  {lead.notion_page_url && (
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={lead.notion_page_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-2 h-3.5 w-3.5" />
+                        Vedi su Notion
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Badge className="bg-yellow-100 text-yellow-800">In attesa di compilazione</Badge>
+                  {lead.form_url && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText(lead.form_url!);
+                        toast({ title: "Link copiato", description: "Link del modulo copiato negli appunti" });
+                      }}
+                    >
+                      <Copy className="mr-2 h-3.5 w-3.5" />
+                      Copia link modulo
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Actions */}
           <div className="flex flex-wrap gap-2">
             {lead.status !== "WON" && !lead.owner_id && (

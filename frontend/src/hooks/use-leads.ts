@@ -24,6 +24,9 @@ interface LeadListItem {
   estimated_rooms: number | null;
   assigned_to_id: string | null;
   assigned_to: AssignedUser | null;
+  form_url: string | null;
+  notion_page_url: string | null;
+  form_submitted_at: string | null;
   created_at: string;
   updated_at: string;
   converted_at: string | null;

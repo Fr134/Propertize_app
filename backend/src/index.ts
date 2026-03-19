@@ -26,6 +26,7 @@ import teamRoutes from "./routes/team";
 import authorizationsRoutes from "./routes/authorizations";
 import pdfTemplatesRoutes from "./routes/pdf-templates";
 import activityLogsRoutes from "./routes/activity-logs";
+import webhooksRoutes from "./routes/webhooks";
 
 const app = new Hono<AppEnv>();
 
@@ -65,6 +66,7 @@ api.route("/team", teamRoutes);
 api.route("/authorizations", authorizationsRoutes);
 api.route("/pdf-templates", pdfTemplatesRoutes);
 api.route("/activity-logs", activityLogsRoutes);
+api.route("/webhooks", webhooksRoutes);
 
 app.route("/api", api);
 
