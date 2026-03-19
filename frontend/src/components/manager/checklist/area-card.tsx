@@ -45,21 +45,33 @@ interface AreaCardProps {
 export function AreaCard({ area, onChange, onDelete, supplyItems }: AreaCardProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
-  const { startUpload } = useUploadThing("checklistPhoto");
+  const { startUpload } = useUploadThing("checklistPhoto", {
+    onUploadError: (err) => {
+      console.error("Upload error:", err);
+      setUploadError(err.message);
+      setUploading(false);
+    },
+  });
 
   const handlePhotoUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
       setUploading(true);
+      setUploadError("");
       try {
         const res = await startUpload([file]);
-        if (res?.[0]?.ufsUrl) {
-          onChange({ ...area, reference_photo_url: res[0].ufsUrl });
+        const url = res?.[0]?.ufsUrl ?? res?.[0]?.url;
+        if (url) {
+          onChange({ ...area, reference_photo_url: url });
+        } else {
+          setUploadError("Upload riuscito ma URL mancante");
         }
-      } catch {
-        // upload failed silently
+      } catch (err) {
+        console.error("Upload failed:", err);
+        setUploadError(err instanceof Error ? err.message : "Errore upload");
       } finally {
         setUploading(false);
         e.target.value = "";
@@ -215,23 +227,28 @@ export function AreaCard({ area, onChange, onDelete, supplyItems }: AreaCardProp
               </button>
             </div>
           ) : (
-            <label className="flex h-24 w-40 cursor-pointer items-center justify-center rounded-md border border-dashed text-muted-foreground hover:border-primary hover:text-primary transition-colors">
-              {uploading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <div className="flex flex-col items-center gap-1">
-                  <ImagePlus className="h-5 w-5" />
-                  <span className="text-xs">Carica foto</span>
-                </div>
+            <div>
+              <label className="flex h-24 w-40 cursor-pointer items-center justify-center rounded-md border border-dashed text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                {uploading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1">
+                    <ImagePlus className="h-5 w-5" />
+                    <span className="text-xs">Carica foto</span>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                  disabled={uploading}
+                />
+              </label>
+              {uploadError && (
+                <p className="text-xs text-destructive mt-1">{uploadError}</p>
               )}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handlePhotoUpload}
-                disabled={uploading}
-              />
-            </label>
+            </div>
           )}
         </div>
 
