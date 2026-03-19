@@ -75,7 +75,12 @@ router.post("/leads", auth, requireManager, requirePermission("can_manage_leads"
       clientName: parsed.data.first_name,
       analysisUrl,
     });
-    sendEmail({ to: parsed.data.email, ...tpl });
+    console.log(`[crm] Sending analysis link to ${parsed.data.email} — URL: ${analysisUrl}`);
+    sendEmail({ to: parsed.data.email, ...tpl })
+      .then((ok) => console.log(`[crm] Analysis email to ${parsed.data.email}: ${ok ? "sent" : "failed"}`))
+      .catch((err) => console.error(`[crm] Analysis email error:`, err));
+  } else {
+    console.log(`[crm] No email for lead ${lead.id}, skipping analysis link`);
   }
 
   // Notify assigned manager
