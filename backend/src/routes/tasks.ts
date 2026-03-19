@@ -204,6 +204,7 @@ router.post("/", auth, requireManager, requirePermission("can_manage_operations"
         scheduled_date: new Date(parsed.data.scheduled_date),
         start_time: parsed.data.start_time ? new Date(`1970-01-01T${parsed.data.start_time}`) : null,
         end_time: parsed.data.end_time ? new Date(`1970-01-01T${parsed.data.end_time}`) : null,
+        duration_minutes: parsed.data.duration_minutes ?? null,
         can_use_supplies: canUseSupplies,
         notes: parsed.data.notes,
         checklist_data: checklistData ?? undefined,
@@ -429,12 +430,17 @@ router.patch("/:id/reschedule", auth, requireManager, requirePermission("can_man
   const task = await prisma.task.findUnique({ where: { id } });
   if (!task) return c.json({ error: "Task non trovato" }, 404);
 
+  const data: Record<string, unknown> = {
+    scheduled_date: new Date(parsed.data.scheduled_date),
+    is_scheduled: true,
+  };
+  if (parsed.data.start_time) {
+    data.start_time = new Date(`1970-01-01T${parsed.data.start_time}`);
+  }
+
   const updated = await prisma.task.update({
     where: { id },
-    data: {
-      scheduled_date: new Date(parsed.data.scheduled_date),
-      is_scheduled: true,
-    },
+    data,
     include: {
       property: { select: { id: true, name: true, code: true } },
       operator: { select: { id: true, first_name: true, last_name: true } },

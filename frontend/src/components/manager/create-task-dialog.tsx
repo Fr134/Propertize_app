@@ -372,6 +372,30 @@ export function CreateTaskDialog() {
             )}
 
             <div className="space-y-2">
+              <Label>Durata (minuti)</Label>
+              <Select
+                value={String(form.watch("duration_minutes") ?? "")}
+                onValueChange={(v) => form.setValue("duration_minutes", v ? parseInt(v) : undefined)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleziona durata" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">30 min</SelectItem>
+                  <SelectItem value="60">1 ora</SelectItem>
+                  <SelectItem value="90">1h 30m</SelectItem>
+                  <SelectItem value="120">2 ore</SelectItem>
+                  <SelectItem value="150">2h 30m</SelectItem>
+                  <SelectItem value="180">3 ore</SelectItem>
+                  <SelectItem value="240">4 ore</SelectItem>
+                  <SelectItem value="300">5 ore</SelectItem>
+                  <SelectItem value="360">6 ore</SelectItem>
+                  <SelectItem value="480">8 ore</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>Note (opzionale)</Label>
               <Textarea
                 placeholder="Note aggiuntive..."

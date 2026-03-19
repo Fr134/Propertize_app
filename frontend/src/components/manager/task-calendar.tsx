@@ -144,28 +144,37 @@ export function TaskCalendar({ calView }: TaskCalendarProps) {
 
     const task = active.data.current?.task as TaskListItem | undefined;
     const dateKey = over.data.current?.dateKey as string | undefined;
+    const hour = over.data.current?.hour as number | undefined;
     if (!task || !dateKey) return;
 
     const oldDateKey = task.scheduled_date.slice(0, 10);
-    if (oldDateKey === dateKey) return;
+    const newStartTime = hour !== undefined
+      ? `${String(hour).padStart(2, "0")}:00`
+      : undefined;
+
+    if (oldDateKey === dateKey && !newStartTime) return;
 
     // Optimistic update
     queryClient.setQueriesData<TaskListItem[]>(
       { queryKey: ["tasks"] },
       (old) => {
         if (!old) return old;
-        return old.map((t) =>
-          t.id === task.id ? { ...t, scheduled_date: dateKey, is_scheduled: true } : t
-        );
+        return old.map((t) => {
+          if (t.id !== task.id) return t;
+          const updated = { ...t, scheduled_date: dateKey, is_scheduled: true };
+          if (newStartTime) {
+            updated.start_time = `1970-01-01T${newStartTime}:00.000Z`;
+          }
+          return updated;
+        });
       }
     );
 
     // API call
     reschedule.mutate(
-      { id: task.id, data: { scheduled_date: dateKey } },
+      { id: task.id, data: { scheduled_date: dateKey, start_time: newStartTime } },
       {
         onError: () => {
-          // Revert on error
           queryClient.invalidateQueries({ queryKey: ["tasks"] });
         },
       }

@@ -477,6 +477,7 @@ model Task {
   end_time              DateTime?
   assignee_type         AssigneeType  @default(INTERNAL)
   external_assignee_id  String?       @db.Uuid
+  duration_minutes      Int?
   cleaning_started_at   DateTime?
   cleaning_ended_at     DateTime?
   can_use_supplies      Boolean       @default(false)

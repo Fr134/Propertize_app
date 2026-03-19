@@ -149,6 +149,7 @@ export const createTaskSchema = z.object({
   scheduled_date: z.string().min(1, "Data obbligatoria"),
   start_time: z.string().optional(),
   end_time: z.string().optional(),
+  duration_minutes: z.number().int().min(15).max(720).optional(),
   assigned_to: z.string().uuid("ID operatrice non valido").optional(),
   external_assignee_id: z.string().uuid("ID contatto esterno non valido").optional(),
   assignee_type: z.enum(["INTERNAL", "EXTERNAL"]).default("INTERNAL"),
@@ -166,6 +167,7 @@ export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
 export const rescheduleTaskSchema = z.object({
   scheduled_date: z.string().min(1, "Data obbligatoria"),
+  start_time: z.string().optional(),
 });
 
 export type RescheduleTaskInput = z.infer<typeof rescheduleTaskSchema>;

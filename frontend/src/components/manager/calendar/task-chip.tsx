@@ -50,13 +50,19 @@ export const TaskChip = forwardRef<HTMLDivElement, TaskChipProps>(
 
     const statusTitle = `${typeInfo.label}: ${assigneeLabel}`;
 
+    const durationLabel = task.duration_minutes
+      ? task.duration_minutes >= 60
+        ? `${Math.floor(task.duration_minutes / 60)}h${task.duration_minutes % 60 ? ` ${task.duration_minutes % 60}m` : ""}`
+        : `${task.duration_minutes}m`
+      : null;
+
     return (
       <div
         ref={ref}
         {...dragAttributes}
         {...dragListeners}
         className={cn(
-          "rounded px-1.5 py-0.5 text-xs border truncate cursor-pointer hover:opacity-75 transition-opacity",
+          "rounded px-1.5 py-0.5 text-xs border cursor-pointer hover:opacity-75 transition-opacity h-full overflow-hidden",
           STATUS_COLORS[task.status] ?? "bg-gray-100 text-gray-700 border-gray-200",
           isDragging && "opacity-50 shadow-lg ring-2 ring-primary",
           className
@@ -66,6 +72,9 @@ export const TaskChip = forwardRef<HTMLDivElement, TaskChipProps>(
         <Link href={`/manager/tasks/${task.id}`} className="block truncate">
           {content}
         </Link>
+        {durationLabel && variant === "detailed" && (
+          <span className="text-[10px] opacity-70">{durationLabel}</span>
+        )}
       </div>
     );
   }

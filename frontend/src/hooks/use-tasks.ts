@@ -73,6 +73,7 @@ interface TaskListItem {
   assignee_type: string;
   start_time: string | null;
   end_time: string | null;
+  duration_minutes: number | null;
   cleaning_started_at: string | null;
   cleaning_ended_at: string | null;
   can_use_supplies: boolean;
