@@ -43,6 +43,9 @@ router.post("/leads", auth, requireManager, requirePermission("can_manage_leads"
   // Auto-assign via round-robin
   const assigneeId = await getNextAssignee("leads");
 
+  // Build Fillout form URL if configured
+  const filloutBaseUrl = process.env.FILLOUT_FORM_URL;
+
   const lead = await prisma.lead.create({
     data: {
       first_name: parsed.data.first_name,
@@ -68,19 +71,25 @@ router.post("/leads", auth, requireManager, requirePermission("can_manage_leads"
     await incrementAssignmentCount(assigneeId, "leads");
   }
 
-  // Send analysis link to client
+  // Build form URL and send to client
+  const formUrl = filloutBaseUrl
+    ? `${filloutBaseUrl}?lead_id=${lead.id}&name=${encodeURIComponent(`${parsed.data.first_name} ${parsed.data.last_name}`)}&email=${encodeURIComponent(parsed.data.email || "")}`
+    : `${FRONTEND_URL}/analisi?lead_id=${lead.id}`;
+
+  // Save form_url on lead
+  await prisma.lead.update({ where: { id: lead.id }, data: { form_url: formUrl } });
+
   if (parsed.data.email) {
-    const analysisUrl = `${FRONTEND_URL}/analisi?lead_id=${lead.id}`;
     const tpl = analysisLink({
       clientName: parsed.data.first_name,
-      analysisUrl,
+      analysisUrl: formUrl,
     });
-    console.log(`[crm] Sending analysis link to ${parsed.data.email} — URL: ${analysisUrl}`);
+    console.log(`[crm] Sending form link to ${parsed.data.email} — URL: ${formUrl}`);
     sendEmail({ to: parsed.data.email, ...tpl })
-      .then((ok) => console.log(`[crm] Analysis email to ${parsed.data.email}: ${ok ? "sent" : "failed"}`))
-      .catch((err) => console.error(`[crm] Analysis email error:`, err));
+      .then((ok) => console.log(`[crm] Form email to ${parsed.data.email}: ${ok ? "sent" : "failed"}`))
+      .catch((err) => console.error(`[crm] Form email error:`, err));
   } else {
-    console.log(`[crm] No email for lead ${lead.id}, skipping analysis link`);
+    console.log(`[crm] No email for lead ${lead.id}, skipping form link`);
   }
 
   // Notify assigned manager
