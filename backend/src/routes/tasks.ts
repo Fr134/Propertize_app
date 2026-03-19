@@ -296,7 +296,7 @@ router.patch("/:id/start", auth, async (c) => {
 
   const { count } = await prisma.task.updateMany({
     where: { id, status: "TODO", assigned_to: userId },
-    data: { status: "IN_PROGRESS" },
+    data: { status: "IN_PROGRESS", cleaning_started_at: new Date() },
   });
 
   if (count === 0) {
@@ -369,7 +369,7 @@ router.patch("/:id/complete", auth, async (c) => {
 
   const { count } = await prisma.task.updateMany({
     where: { id, status: "IN_PROGRESS", assigned_to: userId },
-    data: { status: "COMPLETED", completed_at: new Date() },
+    data: { status: "COMPLETED", completed_at: new Date(), cleaning_ended_at: new Date() },
   });
 
   if (count === 0) {

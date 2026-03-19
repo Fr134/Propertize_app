@@ -475,6 +475,8 @@ model Task {
   end_time              DateTime?
   assignee_type         AssigneeType  @default(INTERNAL)
   external_assignee_id  String?       @db.Uuid
+  cleaning_started_at   DateTime?
+  cleaning_ended_at     DateTime?
   can_use_supplies      Boolean       @default(false)
   is_scheduled          Boolean       @default(true)
   // Se dotthouse_booking_id IS NULL → task creato manualmente

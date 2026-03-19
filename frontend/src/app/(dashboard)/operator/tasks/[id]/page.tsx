@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { SupplyUsageRow } from "@/components/operator/supply-usage-row";
-import { ArrowLeft, MapPin, Play, Send, RotateCcw, PackageCheck, Square, CheckSquare2, CheckCheck, Clock } from "lucide-react";
+import { ArrowLeft, MapPin, Play, Send, RotateCcw, PackageCheck, Square, CheckSquare2, CheckCheck, Clock, StopCircle, Timer } from "lucide-react";
 
 const TASK_TYPE_LABELS: Record<string, { label: string; emoji: string }> = {
   CLEANING: { label: "Pulizia", emoji: "🧹" },
@@ -110,6 +110,15 @@ export default function OperatorTaskDetailPage({
             <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
               <Clock className="h-3 w-3" />
               {task.start_time ?? "—"} – {task.end_time ?? "—"}
+            </div>
+          )}
+          {task.cleaning_started_at && (
+            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+              <Timer className="h-3 w-3" />
+              Iniziata: {new Date(task.cleaning_started_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+              {task.cleaning_ended_at && (
+                <> — Finita: {new Date(task.cleaning_ended_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</>
+              )}
             </div>
           )}
         </div>
@@ -272,11 +281,11 @@ export default function OperatorTaskDetailPage({
               <Button
                 onClick={handleComplete}
                 disabled={completeTask.isPending}
-                className="w-full"
+                className="w-full bg-green-600 hover:bg-green-700"
                 variant="default"
               >
-                <Send className="mr-2 h-4 w-4" />
-                {completeTask.isPending ? "Invio..." : "Invia task completato"}
+                <StopCircle className="mr-2 h-4 w-4" />
+                {completeTask.isPending ? "Completamento..." : "Finisci pulizia"}
               </Button>
             </div>
           )}

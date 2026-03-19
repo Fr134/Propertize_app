@@ -177,6 +177,16 @@ export default function ManagerTaskDetailPage({
                 {task.start_time ?? "—"} – {task.end_time ?? "—"}
               </p>
             )}
+            {task.cleaning_started_at && (
+              <p className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                Pulizia: {new Date(task.cleaning_started_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                {task.cleaning_ended_at && (
+                  <> — {new Date(task.cleaning_ended_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                  {" "}({Math.round((new Date(task.cleaning_ended_at).getTime() - new Date(task.cleaning_started_at).getTime()) / 60000)} min)</>
+                )}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card>
